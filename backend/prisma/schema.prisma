@@ -1,0 +1,348 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                 String         @id @default(cuid())
+  email              String         @unique
+  password           String
+  name               String
+  role               String         @default("USER")
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  tokenVersion       Int            @default(0)
+  comments           Comment[]
+  corrections        Correction[]
+  posts              CulturalPost[]
+  following          Follow[]       @relation("Follower")
+  followers          Follow[]       @relation("Following")
+  interests          Interest[]
+  interviews         Interview[]
+  likes              Like[]
+  actorNotifications Notification[] @relation("NotificationActor")
+  notifications      Notification[] @relation("NotificationRecipient")
+  profile            Profile?
+  saves              Save[]
+  verifications      Verification[]
+
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  bio       String?
+  avatar    String?
+  location  String?
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model CulturalPost {
+  id              String             @id @default(cuid())
+  title           String
+  description     String?
+  content         String?
+  latitude        Float?
+  longitude       Float?
+  published       Boolean            @default(false)
+  userId          String
+  regionId        String?
+  categoryId      String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  comments        Comment[]
+  corrections     Correction[]
+  category        CulturalCategory?  @relation(fields: [categoryId], references: [id])
+  region          Region?            @relation(fields: [regionId], references: [id])
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceRelations CulturalRelation[] @relation("SourcePost")
+  targetRelations CulturalRelation[] @relation("TargetPost")
+  likes           Like[]
+  media           Media[]
+  processingJobs  ProcessingJob[]
+  saves           Save[]
+  tags            TagOnPost[]
+  transcripts     Transcript[]
+  translations    Translation[]
+  verifications   Verification[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([regionId])
+  @@index([published])
+  @@index([published, createdAt(sort: Desc)])
+  @@map("cultural_posts")
+}
+
+model Media {
+  id        String       @id @default(cuid())
+  url       String
+  type      String
+  mimeType  String
+  size      Int
+  filename  String
+  postId    String
+  createdAt DateTime     @default(now())
+  post      CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("media")
+}
+
+model Language {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  code         String        @unique
+  transcripts  Transcript[]
+  translations Translation[]
+
+  @@map("languages")
+}
+
+model Region {
+  id      String         @id @default(cuid())
+  name    String
+  state   String?
+  country String         @default("India")
+  lat     Float?
+  lng     Float?
+  posts   CulturalPost[]
+
+  @@map("regions")
+}
+
+model CulturalCategory {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  description String?
+  posts       CulturalPost[]
+  interests   Interest[]
+
+  @@map("cultural_categories")
+}
+
+model Tag {
+  id    String      @id @default(cuid())
+  name  String      @unique
+  posts TagOnPost[]
+
+  @@map("tags")
+}
+
+model TagOnPost {
+  postId String
+  tagId  String
+  post   CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("tags_on_posts")
+}
+
+model Comment {
+  id        String       @id @default(cuid())
+  content   String
+  userId    String
+  postId    String
+  parentId  String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  parent    Comment?     @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[]    @relation("CommentReplies")
+  post      CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model Like {
+  id        String       @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime     @default(now())
+  post      CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("likes")
+}
+
+model Save {
+  id        String       @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime     @default(now())
+  post      CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("saves")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Interest {
+  id         String           @id @default(cuid())
+  userId     String
+  categoryId String
+  category   CulturalCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@map("interests")
+}
+
+model Verification {
+  id        String       @id @default(cuid())
+  status    String       @default("PENDING")
+  comment   String?
+  userId    String
+  postId    String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  post      CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("verifications")
+}
+
+model Correction {
+  id         String       @id @default(cuid())
+  field      String
+  suggestion String
+  userId     String
+  postId     String
+  createdAt  DateTime     @default(now())
+  post       CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("corrections")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  relatedId String?
+  userId    String
+  createdAt DateTime @default(now())
+  actorId   String?
+  actor     User?    @relation("NotificationActor", fields: [actorId], references: [id])
+  user      User     @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model Interview {
+  id        String              @id @default(cuid())
+  title     String
+  status    String              @default("DRAFT")
+  userId    String
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  questions InterviewQuestion[]
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}
+
+model InterviewQuestion {
+  id          String              @id @default(cuid())
+  question    String
+  order       Int
+  interviewId String
+  interview   Interview           @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  responses   InterviewResponse[]
+
+  @@map("interview_questions")
+}
+
+model InterviewResponse {
+  id            String            @id @default(cuid())
+  audioUrl      String?
+  transcription String?
+  questionId    String
+  createdAt     DateTime          @default(now())
+  question      InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("interview_responses")
+}
+
+model Transcript {
+  id         String       @id @default(cuid())
+  content    String
+  languageId String
+  postId     String
+  createdAt  DateTime     @default(now())
+  language   Language     @relation(fields: [languageId], references: [id])
+  post       CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("transcripts")
+}
+
+model Translation {
+  id         String       @id @default(cuid())
+  content    String
+  languageId String
+  postId     String
+  createdAt  DateTime     @default(now())
+  language   Language     @relation(fields: [languageId], references: [id])
+  post       CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("translations")
+}
+
+model CulturalRelation {
+  id           String       @id @default(cuid())
+  relationType String
+  sourcePostId String
+  targetPostId String
+  createdAt    DateTime     @default(now())
+  sourcePost   CulturalPost @relation("SourcePost", fields: [sourcePostId], references: [id], onDelete: Cascade)
+  targetPost   CulturalPost @relation("TargetPost", fields: [targetPostId], references: [id], onDelete: Cascade)
+
+  @@unique([sourcePostId, targetPostId, relationType])
+  @@map("cultural_relations")
+}
+
+model ProcessingJob {
+  id        String       @id @default(cuid())
+  status    String       @default("QUEUED")
+  step      String?
+  error     String?
+  postId    String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  post      CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("processing_jobs")
+}

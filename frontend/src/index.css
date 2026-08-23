@@ -1,0 +1,130 @@
+/* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORTS — DO NOT DELETE THIS COMMENT */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600&display=swap');
+
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+@import 'leaflet/dist/leaflet.css';
+
+:root {
+  --vk-terracotta: #9c3b1b;
+  --vk-clay: #c86a3f;
+  --vk-charcoal: #26221f;
+  --vk-cream: #f5f1ea;
+  --vk-paper: #fffdf9;
+  --vk-sand: #bdb4a7;
+  --vk-verified: #2f6b4f;
+  --vk-ai: #5b4a8a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+/* Fill the real viewport on mobile browsers so full-height surfaces
+   (map, recorder) are never clipped by browser chrome. */
+@supports (height: 100dvh) {
+  #root {
+    min-height: 100dvh;
+  }
+}
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+/* Media never forces the page wider than the viewport */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+body {
+  background-color: var(--vk-cream);
+  color: var(--vk-charcoal);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+/* Prevent long words / URLs from creating horizontal scroll on mobile */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+li,
+td,
+th,
+dt,
+dd {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Subtle woven paper texture for hero surfaces */
+.vk-texture {
+  background-image: repeating-linear-gradient(
+      45deg,
+      rgba(38, 34, 31, 0.025) 0px,
+      rgba(38, 34, 31, 0.025) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(38, 34, 31, 0.025) 0px,
+      rgba(38, 34, 31, 0.025) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+}
+.vk-scroll-x {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.vk-scroll-x::-webkit-scrollbar {
+  display: none;
+}
+*:focus-visible {
+  outline: 2px solid var(--vk-terracotta);
+  outline-offset: 2px;
+}
+/* Leaflet surface tuned to the cream canvas */
+.leaflet-container {
+  background: #e6ded1;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 10px;
+}
+/* Keep map chrome below app-level panels and navigation */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
