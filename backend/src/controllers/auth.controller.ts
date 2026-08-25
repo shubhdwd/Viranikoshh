@@ -87,7 +87,13 @@ export async function register(
     });
 
     setAuthCookie(res, token);
-    sendSuccess(res, 201, "User registered successfully.", { user });
+
+    // In non-production environments include the token in the response body
+    // so that Playwright E2E tests can use it for direct API calls.
+    const payload: Record<string, unknown> = { user };
+    if (!isProd) payload.token = token;
+
+    sendSuccess(res, 201, "User registered successfully.", payload);
   } catch (error) {
     if (error instanceof ZodError) {
       sendError(res, 400, "Validation failed.", error.issues);
@@ -149,9 +155,13 @@ export async function login(
     const { password: _, tokenVersion: __, ...userWithoutPassword } = user;
 
     setAuthCookie(res, token);
-    sendSuccess(res, 200, "Login successful.", {
-      user: userWithoutPassword,
-    });
+
+    // In non-production environments include the token in the response body
+    // so that Playwright E2E tests can use it for direct API calls.
+    const payload: Record<string, unknown> = { user: userWithoutPassword };
+    if (!isProd) payload.token = token;
+
+    sendSuccess(res, 200, "Login successful.", payload);
   } catch (error) {
     if (error instanceof ZodError) {
       sendError(res, 400, "Validation failed.", error.issues);
