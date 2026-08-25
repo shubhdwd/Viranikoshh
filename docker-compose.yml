@@ -1,0 +1,67 @@
+# Viranikosh — full local stack: Postgres + backend + frontend.
+#
+#   1. cp .env.example .env   and fill in the AI / Cloudinary keys
+#   2. docker compose up --build
+#   3. open http://localhost:8080
+#
+# The backend applies Prisma migrations on startup (migrate deploy).
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-viranikosh}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      # Same local Postgres for both — no pgBouncer in the compose stack.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-viranikosh}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-viranikosh}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      # Required by the backend's startup env validation.
+      GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY in .env}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY in .env}
+      COHERE_API_KEY: ${COHERE_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:?set CLOUDINARY_CLOUD_NAME in .env}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:?set CLOUDINARY_API_KEY in .env}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:?set CLOUDINARY_API_SECRET in .env}
+      UPLOAD_DIR: uploads
+    volumes:
+      # Persist locally-stored media (Cloudinary fallback) across restarts.
+      - uploads:/app/uploads
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Same-origin; nginx proxies /api and /files to the backend service.
+        VITE_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
+  uploads:

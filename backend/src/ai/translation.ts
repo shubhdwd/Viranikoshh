@@ -63,9 +63,12 @@ ${text}`;
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-    const response = await fetch(`${geminiUrl()}?key=${apiKey}`, {
+    const response = await fetch(geminiUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify({
         contents: [{ parts: [{ text: translationPrompt }] }],
         generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
@@ -73,8 +76,7 @@ ${text}`;
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gemini API error (${response.status}): ${errText}`);
+      throw new Error(`Gemini API error (${response.status})`);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

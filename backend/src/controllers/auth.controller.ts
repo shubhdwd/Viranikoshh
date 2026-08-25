@@ -12,7 +12,7 @@ function setAuthCookie(res: Response, token: string): void {
   res.cookie("auth_token", token, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -22,7 +22,7 @@ function clearAuthCookie(res: Response): void {
   res.clearCookie("auth_token", {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     path: "/",
   });
 }
@@ -70,21 +70,24 @@ export async function register(
         name: true,
         email: true,
         role: true,
-        tokenVersion: true,
         createdAt: true,
         profile: true,
       },
     });
 
-    // 5. Sign JWT
+    // 5. Sign JWT (fetch tokenVersion separately — not exposed to client)
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { tokenVersion: true },
+    });
     const token = signToken({
       id: user.id,
       role: user.role,
-      tokenVersion: user.tokenVersion,
+      tokenVersion: dbUser!.tokenVersion,
     });
 
     setAuthCookie(res, token);
-    sendSuccess(res, 201, "User registered successfully.", { user, token });
+    sendSuccess(res, 201, "User registered successfully.", { user });
   } catch (error) {
     if (error instanceof ZodError) {
       sendError(res, 400, "Validation failed.", error.issues);
@@ -142,13 +145,12 @@ export async function login(
       tokenVersion: user.tokenVersion,
     });
 
-    // Don't return password in response
-    const { password: _, ...userWithoutPassword } = user;
+    // Don't return password or tokenVersion in response
+    const { password: _, tokenVersion: __, ...userWithoutPassword } = user;
 
     setAuthCookie(res, token);
     sendSuccess(res, 200, "Login successful.", {
       user: userWithoutPassword,
-      token,
     });
   } catch (error) {
     if (error instanceof ZodError) {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BadgeCheckIcon, FlagIcon, MessageSquarePlusIcon, PencilLineIcon, UsersIcon } from 'lucide-react';
 import type { CulturalRecord } from '../types/culture';
 import type { VerificationAction, VerificationEvent } from '../types/verification';
@@ -46,9 +46,30 @@ export function VerificationPanel({
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
   const [localEvents, setLocalEvents] = useState<VerificationEvent[]>([]);
+  const [serverEvents, setServerEvents] = useState<VerificationEvent[]>([]);
   const [confirmation, setConfirmation] = useState<string | null>(null);
-  const history = [...record.community.history, ...localEvents].sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+
+  // Load the persisted verification history (verify / flag / context / correct)
+  // so it survives refreshes — the feed payload doesn't carry it.
+  useEffect(() => {
+    let cancelled = false;
+    verificationApi
+      .listVerifications(record.id)
+      .then((events) => {
+        if (!cancelled) setServerEvents(events);
+      })
+      .catch(() => {
+        /* history is supplementary — ignore load failures */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [record.id]);
+
+  const history = [...record.community.history, ...serverEvents, ...localEvents].sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
   const isOwner = user?.id === record.creatorId;
+  // Number of people who have actually confirmed this record.
+  const verifiedBy = Math.max(record.community.verifiedBy, history.filter((event) => event.action === 'verify').length);
   // You cannot suggest a correction to your own record; everything else stays.
   const availableActions = isOwner ? ACTIONS.filter((a) => a.id === 'context') : ACTIONS;
   const flags = history.filter((event) => event.action === 'flag');
@@ -72,7 +93,7 @@ export function VerificationPanel({
       </h2>
       <p className="mt-1.5 flex items-center gap-1.5 text-sm text-charcoal-muted">
         <UsersIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        {record.community.verifiedBy} community {record.community.verifiedBy === 1 ? 'member has' : 'members have'} confirmed this record
+        {verifiedBy} community {verifiedBy === 1 ? 'member has' : 'members have'} confirmed this record
         {record.community.corrections.length > 0 && ` · ${record.community.corrections.length} correction${record.community.corrections.length > 1 ? 's' : ''}`}
       </p>
 

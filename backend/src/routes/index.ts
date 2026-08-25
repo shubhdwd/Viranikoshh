@@ -23,7 +23,10 @@ router.get("/health", async (_req, res) => {
     res.json({
       status: "OK",
       message: "Viranikosh API is running",
-      providers,
+      providers: providers.map((p) => ({
+        name: p.name,
+        available: p.available,
+      })),
     });
   } catch {
     res.status(503).json({

@@ -78,7 +78,7 @@ export function Create() {
     uploadApi.getTaxonomy().then(({ regions: r, categories: c }) => {
       setRegions(r);
       setCategories(c);
-    }).catch(() => {});
+    }).catch(() => { /* taxonomy load is best-effort */ });
   }, []);
   const hasMedia = draft.mediaType === 'text' ? draft.originalTranscript.trim().length > 0 : Boolean(file || recording.audioUrl);
   const patch = (values: Partial<ContributionDraft>) => setDraft((d) => ({

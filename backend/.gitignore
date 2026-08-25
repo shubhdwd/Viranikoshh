@@ -6,12 +6,13 @@ dist/
 
 # Environment
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Prisma
+# NOTE: prisma/migrations/ IS committed on purpose — migration history must be
+# in version control so every environment applies the same schema changes.
 prisma/*.db
-prisma/migrations/
 
 # Uploaded files (local disk storage)
 uploads/

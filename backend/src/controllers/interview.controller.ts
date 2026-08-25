@@ -24,7 +24,7 @@ const INTERVIEW_SELECT = {
   createdAt: true,
   updatedAt: true,
   user: {
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true },
   },
   questions: {
     orderBy: { order: "asc" as const },

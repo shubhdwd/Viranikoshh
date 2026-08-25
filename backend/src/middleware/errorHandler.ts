@@ -20,9 +20,7 @@ export function errorHandler(
 
   // Prisma known error codes
   if ((err as any).code === "P2002") {
-    sendError(res, 409, "A record with that value already exists.", {
-      field: (err as any).meta?.target,
-    });
+    sendError(res, 409, "A record with that value already exists.");
     return;
   }
 
@@ -31,10 +29,5 @@ export function errorHandler(
     return;
   }
 
-  sendError(
-    res,
-    500,
-    "Internal server error.",
-    process.env.NODE_ENV === "development" ? err.message : undefined
-  );
+  sendError(res, 500, "Internal server error.");
 }

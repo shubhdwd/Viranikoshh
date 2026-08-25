@@ -9,6 +9,7 @@ import { SectionHeading } from '../components/ui/SectionHeading';
 import { Chip } from '../components/ui/Chip';
 import { GridSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { CulturalImage } from '../components/ui/CulturalImage';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { CATEGORY_LABELS, type CulturalCategory } from '../types/culture';
 import { cn } from '../utils/cn';
@@ -48,7 +49,7 @@ export function Saved() {
           </div> : <ul className="divide-y divide-sand-lighter rounded-card border border-sand-light bg-paper">
             {items.map((record) => <li key={record.id}>
                 <Link to={`/post/${record.id}`} className="flex items-center gap-4 p-4 transition-colors duration-150 ease-firm hover:bg-cream">
-                  <img src={record.source.media.posterUrl} alt="" className="h-14 w-14 shrink-0 rounded-md object-cover" />
+                  <CulturalImage src={record.source.media.posterUrl} alt="" aria-hidden="true" seed={record.id} category={record.category} className="h-14 w-14 shrink-0 rounded-md object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-display text-[15px] font-semibold text-charcoal">{record.title}</p>
                     <p className="mt-0.5 truncate text-[12px] text-charcoal-soft">

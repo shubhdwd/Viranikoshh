@@ -5,6 +5,7 @@ import type { CulturalNotification, NotificationKind } from '../types/notificati
 import { getUser } from '../data/users';
 import { getRecord } from '../data/records';
 import { Avatar } from './ui/Avatar';
+import { CulturalImage } from './ui/CulturalImage';
 import { timeAgo } from '../utils/format';
 import { cn } from '../utils/cn';
 const KIND: Record<NotificationKind, {
@@ -60,7 +61,7 @@ export function NotificationItem({
           <p className="mt-1 text-[11px] text-charcoal-soft">{timeAgo(notification.createdAt)}</p>
         </div>
 
-        {record && <img src={record.source.media.posterUrl} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" />}
+        {record && <CulturalImage src={record.source.media.posterUrl} alt="" aria-hidden="true" seed={record.id} category={record.category} className="h-11 w-11 shrink-0 rounded-md object-cover" />}
         {!notification.read && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-terracotta" aria-label="Unread" />}
       </Link>
     </li>;

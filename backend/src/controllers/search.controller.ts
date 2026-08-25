@@ -4,6 +4,14 @@ import { sendSuccess } from "../utils/apiResponse";
 import { POST_SELECT, formatPost } from "./post.controller";
 
 /**
+ * Escape special characters used in SQL LIKE patterns to prevent
+ * users from crafting broader searches via %, _, or \ wildcards.
+ */
+function escapeLike(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
+/**
  * GET /api/search
  *
  * Public. Full-text search across published posts.
@@ -35,18 +43,20 @@ export async function searchPosts(
 
     // Text search across title, description, content
     if (q) {
+      const escaped = escapeLike(q);
       where.OR = [
-        { title: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { content: { contains: q, mode: "insensitive" } },
+        { title: { contains: escaped, mode: "insensitive" } },
+        { description: { contains: escaped, mode: "insensitive" } },
+        { content: { contains: escaped, mode: "insensitive" } },
       ];
     }
 
     // Filter by tag (case-insensitive partial / contains match)
     if (tag) {
+      const escapedTag = escapeLike(tag);
       where.tags = {
         some: {
-          tag: { name: { contains: tag, mode: "insensitive" } },
+          tag: { name: { contains: escapedTag, mode: "insensitive" } },
         },
       };
     }
@@ -117,29 +127,31 @@ export async function searchSuggestions(
       return;
     }
 
+    const escaped = escapeLike(q);
+
     // Run all four searches in parallel
     const [titles, tags, regions, categories] = await Promise.all([
       prisma.culturalPost.findMany({
         where: {
           published: true,
-          title: { contains: q, mode: "insensitive" },
+          title: { contains: escaped, mode: "insensitive" },
         },
         select: { title: true },
         take: limit,
         orderBy: { createdAt: "desc" },
       }),
       prisma.tag.findMany({
-        where: { name: { contains: q, mode: "insensitive" } },
+        where: { name: { contains: escaped, mode: "insensitive" } },
         select: { name: true },
         take: limit,
       }),
       prisma.region.findMany({
-        where: { name: { contains: q, mode: "insensitive" } },
+        where: { name: { contains: escaped, mode: "insensitive" } },
         select: { name: true },
         take: limit,
       }),
       prisma.culturalCategory.findMany({
-        where: { name: { contains: q, mode: "insensitive" } },
+        where: { name: { contains: escaped, mode: "insensitive" } },
         select: { name: true },
         take: limit,
       }),

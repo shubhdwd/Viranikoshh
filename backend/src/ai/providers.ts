@@ -48,8 +48,7 @@ export async function groqChat(
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Groq API error (${response.status}): ${errText}`);
+    throw new Error(`Groq API error (${response.status})`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,8 +97,7 @@ export async function cohereSummarize(
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Cohere API error (${response.status}): ${errText}`);
+    throw new Error(`Cohere API error (${response.status})`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,9 +126,12 @@ export async function geminiGenerate(
   const apiKey = geminiApiKey();
   if (!apiKey) throw new Error("GEMINI_API_KEY not set");
 
-  const response = await fetch(`${geminiBaseUrl()}?key=${apiKey}`, {
+  const response = await fetch(geminiBaseUrl(), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
@@ -141,8 +142,7 @@ export async function geminiGenerate(
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini API error (${response.status}): ${errText}`);
+    throw new Error(`Gemini API error (${response.status})`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,13 +162,11 @@ export async function withFallback<T>(
   try {
     return await primary();
   } catch (primaryErr) {
-    const primaryMsg = primaryErr instanceof Error ? primaryErr.message : String(primaryErr);
-    console.warn(`[providers] ${label} primary failed: ${primaryMsg}. Trying fallback...`);
+    console.warn(`[providers] ${label} primary failed. Trying fallback...`);
     try {
       return await fallback();
     } catch (fallbackErr) {
-      const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-      console.error(`[providers] ${label} fallback also failed: ${fallbackMsg}`);
+      console.error(`[providers] ${label} fallback also failed`);
       // Throw original primary error so upstream error messages stay consistent
       throw primaryErr;
     }

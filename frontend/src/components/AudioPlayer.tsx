@@ -7,7 +7,12 @@ import { cn } from '../utils/cn';
 interface AudioPlayerProps {
   /** Real source when available (recordings the user just captured). */
   src?: string | undefined;
-  durationSec: number;
+  /**
+   * Only set when the length is genuinely known. Real uploads leave it
+   * undefined until the audio element reports its own duration, so no
+   * timeline is drawn for a length nobody measured.
+   */
+  durationSec?: number | undefined;
   seed?: string;
   label?: string;
   className?: string;
@@ -32,13 +37,18 @@ export function AudioPlayer({ src, durationSec, seed = 'vk', label, className, t
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [rate, setRate] = useState(1);
+  const [loadedDuration, setLoadedDuration] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const bars = useMemo(() => waveform(seed), [seed]);
-  const total = durationSec || 1;
+  // Real metadata wins; a supplied duration is only a fixture stand-in.
+  const total = loadedDuration ?? (durationSec && durationSec > 0 ? durationSec : null);
+  const known = total !== null;
   const dark = tone === 'dark';
 
   useEffect(() => {
-    if (src || !playing) return;
+    // Fixtures animate against their declared length; a real source reports
+    // its own position, and an unknown length has nothing to animate.
+    if (src || !playing || total === null) return;
     const id = window.setInterval(() => {
       setPosition((p) => {
         const next = p + 0.25 * rate;
@@ -63,7 +73,7 @@ export function AudioPlayer({ src, durationSec, seed = 'vk', label, className, t
       setPlaying(!playing);
       return;
     }
-    if (position >= total) setPosition(0);
+    if (total !== null && position >= total) setPosition(0);
     setPlaying((p) => !p);
   };
 
@@ -73,12 +83,13 @@ export function AudioPlayer({ src, durationSec, seed = 'vk', label, className, t
   };
 
   const seek = (ratio: number) => {
+    if (total === null) return;
     const next = Math.max(0, Math.min(1, ratio)) * total;
     setPosition(next);
     if (audioRef.current) audioRef.current.currentTime = next;
   };
 
-  const progress = Math.min(1, position / total);
+  const progress = total === null ? 0 : Math.min(1, position / total);
 
   const iconButton = cn(
     'flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ease-firm',
@@ -97,6 +108,10 @@ export function AudioPlayer({ src, durationSec, seed = 'vk', label, className, t
       <audio
         ref={audioRef}
         src={src}
+        onLoadedMetadata={(e) => {
+          const value = e.currentTarget.duration;
+          if (Number.isFinite(value) && value > 0) setLoadedDuration(value);
+        }}
         onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
         onEnded={() => setPlaying(false)}
         className="hidden" />
@@ -158,7 +173,7 @@ export function AudioPlayer({ src, durationSec, seed = 'vk', label, className, t
           )}>
           
           {formatDuration(position)}
-          <span className={dark ? 'text-cream/40' : 'text-charcoal-soft'}> / {formatDuration(total)}</span>
+          <span className={dark ? 'text-cream/40' : 'text-charcoal-soft'}> / {known ? formatDuration(total) : '--:--'}</span>
         </span>
 
         <button type="button" onClick={restart} aria-label="Restart recording" className={iconButton}>

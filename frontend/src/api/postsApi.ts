@@ -1,6 +1,7 @@
 import { request } from './client';
 import type { CulturalComment, CulturalRecord } from '../types/culture';
 import { CATEGORY_NAME_TO_ID } from '../types/culture';
+import { resolveMedia } from '../utils/media';
 
 export interface FeedParams {
   followedCreators: string[];
@@ -9,13 +10,27 @@ export interface FeedParams {
   likedIds?: string[];
 }
 
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedRecords {
+  records: CulturalRecord[];
+  pagination: Pagination;
+}
+
 function transformPost(post: any): CulturalRecord {
   const apiUser = post.user;
+  const category = CATEGORY_NAME_TO_ID[post.category?.name] || 'folk-song';
+  const transcript = post.source?.transcript || post.content || '';
   return {
     id: post.id,
     title: post.title,
     description: post.description ?? '',
-    category: CATEGORY_NAME_TO_ID[post.category?.name] || 'folk-song',
+    category,
     region: post.region?.name || '',
     state: post.region?.state || post.region?.name || '',
     coordinates: [post.latitude ?? 0, post.longitude ?? 0] as [number, number],
@@ -29,15 +44,20 @@ function transformPost(post: any): CulturalRecord {
     comments: post._count?.comments ?? post.comments ?? 0,
     saves: post._count?.saves ?? post.saves ?? 0,
     source: {
-      media: {
-        type: (post.media?.[0]?.type as any) || 'image',
-        posterUrl: post.media?.[0]?.url || post.source?.media?.posterUrl || '',
-        altText: post.media?.[0]?.filename || ''
-      },
+      // The API's media rows disagree on casing and carry no duration, so the
+      // asset is rebuilt here rather than read off the wire field by field.
+      media: resolveMedia({
+        media: post.media,
+        title: post.title,
+        transcript,
+        category,
+        seed: post.id ?? '',
+        durationSec: post.source?.media?.durationSec
+      }),
       language: post.source?.language || '',
-      transcript: post.source?.transcript || '',
-      recordedAt: post.source?.recordedAt || '',
-      recordedBy: post.source?.recordedBy || ''
+      transcript,
+      recordedAt: post.source?.recordedAt || post.createdAt || '',
+      recordedBy: post.source?.recordedBy || apiUser?.name || ''
     },
     ai: post.ai ?? { status: 'QUEUED', tags: [] },
     community: post.community ?? { status: 'pending', verifiedBy: 0, notes: [], corrections: [], history: [] },
@@ -56,6 +76,15 @@ export { transformPost };
 export const postsApi = {
   getFeed(params: FeedParams): Promise<CulturalRecord[]> {
     return request({ url: '/posts/feed', method: 'GET', params }).then((data) => data.posts.map(transformPost));
+  },
+
+  // Paginated feed — returns records plus the server's pagination metadata so
+  // the caller can append further pages.
+  getFeedPage(params: FeedParams, page = 1): Promise<PaginatedRecords> {
+    return request({ url: '/posts/feed', method: 'GET', params: { ...params, page } }).then((data) => ({
+      records: data.posts.map(transformPost),
+      pagination: data.pagination as Pagination
+    }));
   },
 
   getFeatured(): Promise<CulturalRecord[]> {

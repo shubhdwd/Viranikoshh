@@ -38,7 +38,7 @@ const MIME_WHITELIST: Record<MediaCategory, string[]> = {
   ],
   IMAGE: [
     "image/jpeg", "image/png", "image/webp", "image/gif",
-    "image/bmp", "image/svg+xml", "image/avif",
+    "image/bmp", "image/avif",
   ],
   DOCUMENT: [
     "application/pdf", "text/plain", "text/markdown", "text/csv",
@@ -51,7 +51,7 @@ const MIME_WHITELIST: Record<MediaCategory, string[]> = {
 const EXTENSION_WHITELIST = new Set([
   "mp3", "wav", "ogg", "m4a", "aac", "flac", "webm",
   "mp4", "mov", "mkv", "avi", "3gp", "3g2",
-  "jpg", "jpeg", "png", "webp", "gif", "bmp", "svg", "avif",
+  "jpg", "jpeg", "png", "webp", "gif", "bmp", "avif",
   "pdf", "txt", "md", "csv", "doc", "docx", "rtf", "json",
 ]);
 

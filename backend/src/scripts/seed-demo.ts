@@ -8,10 +8,12 @@
 
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { UPLOAD_DIR } from "../middleware/upload.middleware";
 
 const prisma = new PrismaClient({ log: ["error", "warn"] });
 const HASH = bcrypt.hashSync("Demo@12345", 12);
@@ -168,12 +170,16 @@ async function main() {
   // ── 4. Posts ────────────────────────────────────────────────────────
   console.log("Posts...");
   const postIds: string[] = [];
+  // Kept in step with postIds so media can follow each post's own category
+  // rather than being handed out round-robin.
+  const postSeeds: { id: string; category: string; tags: string[] }[] = [];
   for (const [title, desc, content, lat, lng, userEmail, region, category, tags] of POSTS) {
     const userId = userByEmail[userEmail];
     if (!userId) continue;
     const existing = await prisma.culturalPost.findFirst({ where: { title, userId } });
     if (existing) {
       postIds.push(existing.id);
+      postSeeds.push({ id: existing.id, category, tags });
       continue;
     }
     const post = await prisma.culturalPost.create({
@@ -191,21 +197,102 @@ async function main() {
       await prisma.tagOnPost.createMany({ data: tagData, skipDuplicates: true });
     }
     postIds.push(post.id);
+    postSeeds.push({ id: post.id, category, tags });
   }
   console.log(`  ${postIds.length} posts`);
 
   // ── 5. Media ────────────────────────────────────────────────────────
   console.log("Media...");
-  const mediaTypes: { mimeType: string; ext: string; size: number }[] = [
-    { mimeType: "audio/mpeg", ext: "mp3", size: 2400000 },
-    { mimeType: "image/jpeg", ext: "jpg", size: 800000 },
-    { mimeType: "video/mp4", ext: "mp4", size: 15000000 },
-  ];
-  const mediaData = postIds.map((postId, i) => {
-    const mt = mediaTypes[i % 3]!;
-    const type = mt.mimeType.split("/")[0]!;
-    return { url: `/files/demo/media-${i + 1}.${mt.ext}`, type, mimeType: mt.mimeType, size: mt.size, filename: `demo-media-${i + 1}.${mt.ext}`, postId };
-  });
+  // Every seeded record gets a photograph that actually resolves: these are
+  // the cultural images shipped with the frontend (frontend/public), served
+  // at the site root. `type` is stored lowercase to match the client's
+  // MediaType union and what upload.controller.ts writes.
+  const POSTERS = {
+    mithila: "/1fc37d44-14b3-4706-8880-2e646f2805f7.jpg",
+    warli: "/ad6f6831-5487-4038-9c1d-784f340b9d3d.jpg",
+    baul: "/9c0ee134-0e5c-4d01-b23c-c42aaa2f7934.jpg",
+    kalbelia: "/5cc59d29-a3b2-4ca6-8420-ecc86f309fec.jpg",
+    theyyam: "/521aba80-aa8c-4b27-8ad3-50b1254f54f0.jpg",
+    pattachitra: "/c1801f07-2b41-4c65-8bff-e69f3c081609.jpg",
+    pottery: "/d6240f8c-0e49-4534-8f8c-4a7b61f2ba71.jpg",
+    festival: "/6f8a9fc1-7733-4e4b-a51b-dd86f783400b.jpg",
+    elder: "/b3ff0c82-6a38-4489-bc6e-4bb5386e212a.jpg",
+  } as const;
+
+  // Which photograph fits a record, decided by the record's own tags.
+  const POSTER_BY_TAG: Record<string, keyof typeof POSTERS> = {
+    mithila: "mithila", sohar: "mithila", maithili: "mithila",
+    chhath: "festival", "sun-worship": "festival",
+    warli: "warli", "tribal-art": "warli",
+    baul: "baul", mystical: "baul",
+    kalbelia: "kalbelia", "folk-theatre": "kalbelia", "classical-dance": "kalbelia",
+    theyyam: "theyyam", "mask-making": "theyyam", "dance-drama": "theyyam",
+    pattachitra: "pattachitra", "scroll-painting": "pattachitra", "textile-craft": "pattachitra",
+    pottery: "pottery", terracotta: "pottery",
+    storytelling: "elder", ghotul: "elder",
+  };
+
+  // A record's medium follows what it actually is, not its position in the
+  // list — an artwork is never presented as a recording.
+  const MEDIUM_BY_CATEGORY: Record<string, "audio" | "video" | "image"> = {
+    "folk-song": "audio", "folk-story": "audio", "oral-tradition": "audio",
+    "traditional-practice": "video",
+    artwork: "image", craft: "image", festival: "image", "local-history": "image",
+  };
+
+  // The repo ships no sample recordings, so a time-based row is only written
+  // when the file is genuinely there — drop a recording at one of these paths
+  // under backend/uploads/ and the audio/video players light up on reseed.
+  // Without it the record stays what we can actually serve: its photograph.
+  const SAMPLES: Record<"audio" | "video", { file: string; mimeType: string }[]> = {
+    audio: [
+      { file: "demo/recording.mp3", mimeType: "audio/mpeg" },
+      { file: "demo/recording.wav", mimeType: "audio/wav" },
+    ],
+    video: [
+      { file: "demo/performance.mp4", mimeType: "video/mp4" },
+      { file: "demo/performance.webm", mimeType: "video/webm" },
+    ],
+  };
+
+  type MediaRow = { url: string; type: string; mimeType: string; size: number; filename: string; postId: string };
+  const publicDir = path.resolve(__dirname, "../../../frontend/public");
+
+  function findSample(medium: "audio" | "video"): Omit<MediaRow, "postId" | "type"> | null {
+    for (const candidate of SAMPLES[medium]) {
+      const abs = path.join(UPLOAD_DIR, candidate.file);
+      if (!fs.existsSync(abs)) continue;
+      return {
+        url: `/files/${candidate.file}`,
+        mimeType: candidate.mimeType,
+        size: fs.statSync(abs).size,
+        filename: path.basename(candidate.file),
+      };
+    }
+    return null;
+  }
+
+  const mediaData: MediaRow[] = [];
+  for (const seed of postSeeds) {
+    const posterKey = seed.tags.map(t => POSTER_BY_TAG[t]).find(Boolean) ?? "mithila";
+    const posterUrl = POSTERS[posterKey];
+    const medium = MEDIUM_BY_CATEGORY[seed.category] ?? "image";
+    const sample = medium === "image" ? null : findSample(medium);
+    if (sample) {
+      mediaData.push({ ...sample, type: medium, postId: seed.id });
+    }
+    // Always keep the photograph: it is the record itself when there is no
+    // recording, and the poster frame behind the player when there is one.
+    const posterAbs = path.join(publicDir, posterUrl.replace(/^\//, ""));
+    mediaData.push({
+      url: posterUrl,
+      type: "image",
+      mimeType: "image/jpeg",
+      size: fs.existsSync(posterAbs) ? fs.statSync(posterAbs).size : 0,
+      filename: path.basename(posterUrl),
+      postId: seed.id,
+    });
+  }
   // Check which posts already have media
   const existingMedia = await prisma.media.findMany({ select: { postId: true } });
   const postsWithMedia = new Set(existingMedia.map(m => m.postId));
@@ -213,6 +300,7 @@ async function main() {
   if (newMedia.length > 0) {
     await prisma.media.createMany({ data: newMedia, skipDuplicates: true });
   }
+  console.log(`  ${newMedia.length} media rows`);
 
   // ── 6. Transcripts & Translations ───────────────────────────────────
   console.log("Transcripts & Translations...");

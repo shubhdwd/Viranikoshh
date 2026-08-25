@@ -47,12 +47,11 @@ async function postToGroq(
       });
 
       if (!response.ok) {
-        const errText = await response.text();
-        const msg = `Groq Whisper API error (${response.status}): ${errText}`;
+        await response.text().catch(() => {}); // consume body
+        const msg = `Groq Whisper API error (${response.status})`;
         if (
           response.status >= 500 ||
-          response.status === 429 ||
-          isRetryableGroqError(errText)
+          response.status === 429
         ) {
           lastError = new Error(msg);
           if (attempt < MAX_RETRIES) {

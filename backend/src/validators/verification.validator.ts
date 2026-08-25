@@ -2,9 +2,9 @@ import { z } from "zod";
 
 export const verifyPostSchema = z.object({
   status: z
-    .string({ error: "Status is required" })
-    .min(1, "Status cannot be empty")
-    .trim(),
+    .enum(["VERIFIED", "FLAGGED", "CONTEXT"], {
+      error: "Status must be VERIFIED, FLAGGED, or CONTEXT",
+    }),
   comment: z
     .string()
     .max(1000, "Comment must be at most 1000 characters")

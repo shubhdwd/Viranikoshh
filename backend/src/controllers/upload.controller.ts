@@ -37,7 +37,7 @@ async function storeFile(
     return { url: result.url, cloudinaryPublicId: result.publicId };
   } catch (err) {
     // Log error but don't crash — fall back to local storage
-    console.error(`Cloudinary upload failed, falling back to local:`, err);
+    console.error(`Cloudinary upload failed, falling back to local`);
     const fallbackUrl = `/files/${category.toLowerCase()}/${path.basename(localPath)}`;
     return { url: fallbackUrl, cloudinaryPublicId: null };
   }
@@ -102,7 +102,7 @@ export async function uploadMedia(
     }
 
     // Upload to Cloudinary (with local fallback)
-    const { url, cloudinaryPublicId } = await storeFile(
+    const { url } = await storeFile(
       file.path,
       category,
       file.mimetype
@@ -112,7 +112,10 @@ export async function uploadMedia(
       data: {
         postId: parsed.postId,
         url,
-        type: category,
+        // Stored lowercase to match the demo seed and the client's MediaType
+        // union ("audio" | "video" | "image" | "text"). MediaCategory stays
+        // uppercase internally for size limits and the AI pipeline.
+        type: category.toLowerCase(),
         mimeType: file.mimetype,
         size: file.size,
         filename: file.originalname,
@@ -134,11 +137,8 @@ export async function uploadMedia(
     startPipeline(pipelineCtx);
 
     sendSuccess(res, 201, "Upload successful. File queued for processing.", {
-      media: {
-        ...media,
-        cloudinaryPublicId,
-      },
-      processingJob,
+      media,
+      processingJob: { id: processingJob.id, status: processingJob.status },
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -214,8 +214,6 @@ export async function getUploadStatus(
       postId: media.postId,
       status: processingJob?.status ?? null,
       step: processingJob?.step ?? null,
-      error: processingJob?.error ?? null,
-      processingJob,
       transcripts,
       translations,
       tags: tagLinks.map((t) => t.tag.name),

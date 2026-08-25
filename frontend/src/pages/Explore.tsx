@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SearchIcon, SearchXIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
 import { searchApi, emptyFilters, type SearchFilterState } from '../api/searchApi';
-import { useAsync } from '../hooks/useAsync';
+import { usePaginatedList } from '../hooks/usePaginatedList';
 import { CulturalPostCard } from '../components/CulturalPostCard';
 import { SearchFilters } from '../components/SearchFilters';
 import { SectionHeading } from '../components/ui/SectionHeading';
@@ -55,7 +55,10 @@ export function Explore() {
     setFilters((f) => f.query === q ? f : { ...f, query: q });
   }, [params]);
 
-  const { data, loading } = useAsync(() => searchApi.search(filters), [JSON.stringify(filters)]);
+  const { items, total, loading, loadingMore, hasMore, loadMore } = usePaginatedList(
+    (page) => searchApi.searchPage(filters, page),
+    [JSON.stringify(filters)]
+  );
 
   const active = FACETS.find((f) => f.id === facet)!;
   const options = useMemo<{value: string;label: string;}[]>(() => {
@@ -215,20 +218,29 @@ export function Explore() {
           <p className="mb-4 text-[13px] text-charcoal-soft">
             {loading ?
             'Searching…' :
-            `${data?.length ?? 0} cultural ${data?.length === 1 ? 'record' : 'records'}`}
+            `${total} cultural ${total === 1 ? 'record' : 'records'}`}
             {filters.query && !loading && <span> for “{filters.query}”</span>}
           </p>
 
           {loading ?
           <GridSkeleton /> :
-          data && data.length > 0 ?
-          <div className="columns-1 gap-3 min-[420px]:columns-2 sm:gap-4 md:columns-3 xl:columns-4 [&>*]:mb-3 sm:[&>*]:mb-4">
-              {data.map((record) =>
-            <div key={record.id} className="break-inside-avoid">
-                  <CulturalPostCard record={record} variant="grid" />
+          items.length > 0 ?
+          <>
+              <div className="columns-1 gap-3 min-[420px]:columns-2 sm:gap-4 md:columns-3 xl:columns-4 [&>*]:mb-3 sm:[&>*]:mb-4">
+                {items.map((record) =>
+              <div key={record.id} className="break-inside-avoid">
+                    <CulturalPostCard record={record} variant="grid" />
+                  </div>
+              )}
+              </div>
+              {hasMore &&
+            <div className="mt-6 flex justify-center">
+                  <Button variant="secondary" onClick={loadMore} loading={loadingMore}>
+                    Load more
+                  </Button>
                 </div>
-            )}
-            </div> :
+            }
+            </> :
 
           <EmptyState
             icon={SearchXIcon}
@@ -244,7 +256,7 @@ export function Explore() {
       <Modal open={sheetOpen} onClose={() => setSheetOpen(false)} title="Refine results">
         <SearchFilters filters={filters} onChange={setFilters} className="border-0 p-0" />
         <Button className="mt-4 w-full" onClick={() => setSheetOpen(false)}>
-          Show {data?.length ?? 0} results
+          Show {total} results
         </Button>
       </Modal>
     </div>);

@@ -4,6 +4,7 @@ import { ArrowRightIcon } from 'lucide-react';
 import type { CulturalRecord, RelationshipType } from '../types/culture';
 import { RELATIONSHIP_LABELS } from '../types/culture';
 import { SectionHeading } from './ui/SectionHeading';
+import { CulturalImage } from './ui/CulturalImage';
 const ORDER: RelationshipType[] = ['REGIONAL_VARIANT', 'RELATED_SONG', 'SAME_FESTIVAL', 'SAME_ART_FORM', 'RELATED_TRADITION'];
 export function KnowledgeGraph({
   record,
@@ -47,7 +48,7 @@ export function KnowledgeGraph({
             <ul className="mt-2 space-y-2 min-w-0">
               {group.items.map((item) => <li key={item.id} className="min-w-0">
                   <Link to={`/post/${item.id}`} className="group flex items-center gap-2.5 sm:gap-3 rounded-lg border border-sand-light p-2 sm:p-2.5 transition-colors duration-150 ease-firm hover:border-charcoal-soft overflow-hidden min-w-0">
-                    <img src={item.source.media.posterUrl} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />
+                    <CulturalImage src={item.source.media.posterUrl} alt="" aria-hidden="true" seed={item.id} category={item.category} className="h-10 w-10 shrink-0 rounded-md object-cover" />
                     <span className="min-w-0 flex-1 overflow-hidden">
                       <span className="block truncate text-[13px] sm:text-[14px] font-medium text-charcoal">{item.title}</span>
                       <span className="block truncate text-[11px] sm:text-[12px] text-charcoal-soft">

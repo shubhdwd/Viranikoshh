@@ -6,6 +6,7 @@ import type { CulturalRecord, MediaType } from '../types/culture';
 import { CATEGORY_LABELS } from '../types/culture';
 import { usePhoneViewport } from '../hooks/useMediaQuery';
 import { Avatar } from './ui/Avatar';
+import { CulturalImage } from './ui/CulturalImage';
 import { Modal } from './ui/Modal';
 import { VerificationBadge } from './VerificationBadge';
 import { CulturalMediaViewer } from './CulturalMediaViewer';
@@ -14,6 +15,7 @@ import { PostActions } from './PostActions';
 import { CommentSection } from './CommentSection';
 import { AIProcessingStatus } from './AIProcessingStatus';
 import { formatDuration, timeAgo } from '../utils/format';
+import { isTimeBased } from '../utils/media';
 import { cn } from '../utils/cn';
 
 interface CulturalPostCardProps {
@@ -26,6 +28,18 @@ function MediaIcon({ type }: {type: MediaType;}) {
   if (type === 'audio') return <Volume2Icon className="h-3 w-3" aria-hidden="true" />;
   if (type === 'video') return <PlayIcon className="h-3 w-3" aria-hidden="true" />;
   return <FileTextIcon className="h-3 w-3" aria-hidden="true" />;
+}
+
+/**
+ * Time-based records show their length once it is known; everything else names
+ * its kind. A duration is never shown for media that has no timeline.
+ */
+function mediaBadgeLabel(media: CulturalRecord['source']['media']): string {
+  if (isTimeBased(media.type)) {
+    if (media.durationSec && media.durationSec > 0) return formatDuration(media.durationSec);
+    return media.type === 'audio' ? 'Audio' : 'Video';
+  }
+  return 'Text';
 }
 
 export function CulturalPostCard({ record, variant = 'feed', className }: CulturalPostCardProps) {
@@ -43,18 +57,20 @@ export function CulturalPostCard({ record, variant = 'feed', className }: Cultur
         
         <Link to={`/post/${record.id}`} className="block">
           <div className="relative aspect-[4/3] overflow-hidden bg-sand-lighter">
-            <img
+            <CulturalImage
               src={record.source.media.posterUrl}
               alt={record.source.media.altText}
+              seed={record.id}
+              category={record.category}
               className="h-full w-full object-cover transition-transform duration-200 ease-firm group-hover:scale-[1.02]" />
-            
+
             <span className="absolute left-2.5 top-2.5 rounded-md bg-charcoal/75 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-cream backdrop-blur-sm">
               {CATEGORY_LABELS[record.category]}
             </span>
             {record.source.media.type !== 'image' &&
             <span className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-md bg-charcoal/75 px-2 py-1 text-[10px] font-medium text-cream backdrop-blur-sm">
                 <MediaIcon type={record.source.media.type} />
-                {record.source.media.durationSec ? formatDuration(record.source.media.durationSec) : 'Text'}
+                {mediaBadgeLabel(record.source.media)}
               </span>
             }
           </div>

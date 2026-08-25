@@ -9,6 +9,7 @@ import { SectionHeading } from '../components/ui/SectionHeading';
 import { Chip } from '../components/ui/Chip';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { CulturalImage } from '../components/ui/CulturalImage';
 import { CATEGORY_LABELS } from '../types/culture';
 import { VERIFICATION_LABELS, type VerificationStatus } from '../types/verification';
 const FILTERS: VerificationStatus[] = ['pending', 'correction-suggested', 'flagged'];
@@ -46,7 +47,7 @@ export function Verification() {
         {items.map((record) => <article key={record.id} className="overflow-hidden rounded-card border border-sand-light bg-paper">
             <div className="grid sm:grid-cols-[170px_1fr] lg:grid-cols-[200px_1fr]">
               <Link to={`/post/${record.id}`} className="block">
-                <img src={record.source.media.posterUrl} alt={record.source.media.altText} className="h-full min-h-[140px] w-full object-cover" />
+                <CulturalImage src={record.source.media.posterUrl} alt={record.source.media.altText} seed={record.id} category={record.category} className="h-full min-h-[140px] w-full object-cover" />
               </Link>
               <div className="p-5">
                 <div className="flex flex-wrap items-center gap-2">

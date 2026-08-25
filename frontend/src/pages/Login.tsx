@@ -12,8 +12,8 @@ export function Login() {
     error
   } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('aarav@viranikosh.in');
-  const [password, setPassword] = useState('heritage');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {

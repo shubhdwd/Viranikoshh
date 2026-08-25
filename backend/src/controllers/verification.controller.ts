@@ -22,7 +22,7 @@ const VERIFICATION_SELECT = {
   createdAt: true,
   updatedAt: true,
   user: {
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true },
   },
 } satisfies any;
 
@@ -37,7 +37,7 @@ const CORRECTION_SELECT = {
   postId: true,
   createdAt: true,
   user: {
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true },
   },
 } satisfies any;
 
@@ -67,8 +67,11 @@ export async function verifyPost(
       return;
     }
 
-    if (post.userId === userId) {
-      sendError(res, 400, "You cannot verify your own post.");
+    // Owners may add CONTEXT to their own record, but cannot VERIFY or FLAG it
+    // (community-driven rule — you don't vouch for or report your own record).
+    const isOwner = post.userId === userId;
+    if (isOwner && parsed.status !== "CONTEXT") {
+      sendError(res, 400, "You cannot verify or flag your own post.");
       return;
     }
 
@@ -89,21 +92,32 @@ export async function verifyPost(
       select: VERIFICATION_SELECT,
     });
 
-    try {
-      const actor = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      });
-      await prisma.notification.create({
-        data: {
-          type: "VERIFICATION",
-          message: `${actor?.name ?? "Someone"} verified your post as ${parsed.status}.`,
-          relatedId: postId,
-          userId: post.userId,
-          actorId: userId,
-        },
-      });
-    } catch { /* notification failure should not block the verification */ }
+    // Notify the post owner — but never notify someone about their own action
+    // (an owner adding context to their own record).
+    if (!isOwner) {
+      try {
+        const actor = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true },
+        });
+        const actorName = actor?.name ?? "Someone";
+        const messageByStatus: Record<string, string> = {
+          VERIFIED: `${actorName} verified your post.`,
+          FLAGGED: `${actorName} flagged your post for review.`,
+          CONTEXT: `${actorName} added context to your post.`,
+        };
+        await prisma.notification.create({
+          data: {
+            type: "VERIFICATION",
+            message:
+              messageByStatus[parsed.status] ?? `${actorName} reviewed your post.`,
+            relatedId: postId,
+            userId: post.userId,
+            actorId: userId,
+          },
+        });
+      } catch { /* notification failure should not block the verification */ }
+    }
 
     sendSuccess(res, 201, "Verification submitted successfully.", verification);
   } catch (error) {
@@ -199,9 +213,12 @@ export async function getVerificationQueue(
       select: { id: true },
     });
 
-    // Get verification counts grouped by postId
+    // Get verification counts grouped by postId. Only VERIFIED confirmations
+    // count toward the "needs 3 verifications" threshold — CONTEXT and FLAGGED
+    // rows are not confirmations.
     const verificationGroups = await prisma.verification.groupBy({
       by: ["postId"],
+      where: { status: "VERIFIED" },
       _count: { id: true },
     });
 
@@ -212,9 +229,11 @@ export async function getVerificationQueue(
       .filter((p) => (countMap.get(p.id) || 0) < 3)
       .map((p) => p.id);
 
-    // Exclude posts the current user already verified
+    // Exclude posts the current user already verified. A user only drops out of
+    // the queue for a post once they've VERIFIED it — adding context or flagging
+    // it does not.
     const myVerifications = await prisma.verification.findMany({
-      where: { userId, postId: { in: eligibleIds } },
+      where: { userId, postId: { in: eligibleIds }, status: "VERIFIED" },
       select: { postId: true },
     });
 
@@ -246,8 +265,9 @@ export async function getVerificationQueue(
 /**
  * GET /api/verification/flagged
  *
- * Auth required. Returns published posts that have at least one correction
- * submitted. Paginated.
+ * Auth required. Returns published posts that need moderator attention —
+ * those with at least one suggested correction OR a FLAGGED verification.
+ * Paginated.
  */
 export async function getFlaggedPosts(
   req: Request,
@@ -258,7 +278,14 @@ export async function getFlaggedPosts(
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 10));
 
-    const where = { published: true, corrections: { some: {} } };
+    // Surface a post if it has a suggested correction OR a FLAGGED verification.
+    const where: any = {
+      published: true,
+      OR: [
+        { corrections: { some: {} } },
+        { verifications: { some: { status: "FLAGGED" } } },
+      ],
+    };
 
     const [posts, total] = await Promise.all([
       prisma.culturalPost.findMany({

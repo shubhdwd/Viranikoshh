@@ -8,6 +8,7 @@ import { VerificationBadge } from '../components/VerificationBadge';
 import { SectionHeading } from '../components/ui/SectionHeading';
 import { Chip } from '../components/ui/Chip';
 import { Skeleton } from '../components/ui/Skeleton';
+import { CulturalImage } from '../components/ui/CulturalImage';
 import { CATEGORY_LABELS, type CulturalCategory, type CulturalRecord } from '../types/culture';
 
 const MAP_CATEGORIES: CulturalCategory[] = [
@@ -34,10 +35,10 @@ function Preview({
     <div className="overflow-hidden rounded-card border border-sand-light bg-paper">
       <div className={layout === 'strip' ? 'flex gap-3 p-3' : ''}>
         {layout === 'strip' ?
-        <img src={record.source.media.posterUrl} alt="" className="h-20 w-20 shrink-0 rounded-md object-cover" /> :
+        <CulturalImage src={record.source.media.posterUrl} alt="" aria-hidden="true" seed={record.id} category={record.category} className="h-20 w-20 shrink-0 rounded-md object-cover" /> :
 
         <div className="relative">
-            <img src={record.source.media.posterUrl} alt="" className="h-40 w-full object-cover" />
+            <CulturalImage src={record.source.media.posterUrl} alt="" aria-hidden="true" seed={record.id} category={record.category} className="h-40 w-full object-cover" />
             <button
             type="button"
             onClick={onClose}

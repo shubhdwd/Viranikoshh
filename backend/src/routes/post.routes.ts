@@ -3,7 +3,7 @@ import {
   authMiddleware,
   optionalAuthMiddleware,
 } from "../middleware/auth.middleware";
-import { strictLimiter } from "../middleware/rateLimit.middleware";
+import { strictLimiter, generalLimiter } from "../middleware/rateLimit.middleware";
 import {
   createPost,
   getFeed,
@@ -23,8 +23,8 @@ router.delete("/:id", authMiddleware, deletePost);
 router.post("/:id/relations", authMiddleware, strictLimiter, createRelation);
 
 // Public routes (optional auth lets draft-owners see their own drafts)
-router.get("/feed", getFeed);
-router.get("/:id", optionalAuthMiddleware, getPostById);
-router.get("/:id/related", getRelatedPosts);
+router.get("/feed", generalLimiter, getFeed);
+router.get("/:id", optionalAuthMiddleware, generalLimiter, getPostById);
+router.get("/:id/related", generalLimiter, getRelatedPosts);
 
 export default router;

@@ -4,11 +4,13 @@ import { motion } from 'framer-motion';
 import { AlertCircleIcon, CompassIcon } from 'lucide-react';
 import { postsApi } from '../api/postsApi';
 import { useAsync } from '../hooks/useAsync';
+import { usePaginatedList } from '../hooks/usePaginatedList';
 import { useAuth } from '../contexts/AuthContext';
 import { useInteractions } from '../contexts/InteractionsContext';
 import { CulturalPostCard } from '../components/CulturalPostCard';
 import { DiscoveryRail } from '../components/DiscoveryRail';
 import { PostCardSkeleton } from '../components/ui/Skeleton';
+import { CulturalImage } from '../components/ui/CulturalImage';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { CATEGORY_LABELS } from '../types/culture';
@@ -17,8 +19,8 @@ export function Home() {
   const { user } = useAuth();
   const { followedCreators, followedInterests, saved, liked } = useInteractions();
 
-  const feed = useAsync(
-    () => postsApi.getFeed({ followedCreators, followedInterests, savedIds: saved, likedIds: liked }),
+  const feed = usePaginatedList(
+    (page) => postsApi.getFeedPage({ followedCreators, followedInterests, savedIds: saved, likedIds: liked }, page),
     [followedCreators.join(), followedInterests.join(), saved.join(), liked.join()]
   );
   const featured = useAsync(() => postsApi.getFeatured(), []);
@@ -54,11 +56,14 @@ export function Home() {
               to={`/post/${record.id}`}
               className="group relative h-32 w-48 shrink-0 overflow-hidden rounded-card border border-sand-light sm:h-36 sm:w-56">
               
-                <img
+                <CulturalImage
                 src={record.source.media.posterUrl}
                 alt=""
+                aria-hidden="true"
+                seed={record.id}
+                category={record.category}
                 className="h-full w-full object-cover transition-transform duration-200 ease-firm group-hover:scale-[1.03]" />
-              
+
                 <span className="absolute inset-0 bg-charcoal/45" />
                 <span className="absolute inset-x-0 bottom-0 p-3">
                   <span className="block text-[10px] uppercase tracking-[0.14em] text-cream/70">
@@ -92,7 +97,7 @@ export function Home() {
             </div>
           }
 
-          {!feed.loading && !feed.error && feed.data?.length === 0 &&
+          {!feed.loading && !feed.error && feed.items.length === 0 &&
           <EmptyState
             icon={CompassIcon}
             title="Your feed is quiet"
@@ -102,16 +107,24 @@ export function Home() {
 
           }
 
-          {feed.data?.map((record, index) =>
+          {feed.items.map((record, index) =>
           <motion.div
             key={record.id}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.26, ease: [0.23, 1, 0.32, 1], delay: Math.min(index, 6) * 0.04 }}>
-            
+
               <CulturalPostCard record={record} />
             </motion.div>
           )}
+
+          {feed.hasMore &&
+          <div className="flex justify-center pt-2">
+              <Button variant="secondary" onClick={feed.loadMore} loading={feed.loadingMore}>
+                Load more
+              </Button>
+            </div>
+          }
         </section>
       </div>
 

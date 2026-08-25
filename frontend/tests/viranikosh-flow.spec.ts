@@ -374,7 +374,7 @@ test.describe.serial('Viranikosh E2E Flow', () => {
           data: { userId: testUserId }
         });
       }
-    } catch {}
+    } catch { /* best-effort cleanup */ }
   });
 });
 
@@ -479,7 +479,7 @@ test.describe.serial('Interview audio access control', () => {
           data: { userId: ownerUserId }
         });
       }
-    } catch {}
+    } catch { /* best-effort cleanup */ }
     try {
       if (otherUserId) {
         await request.post(`${API}/auth/test/delete-user`, {
@@ -487,7 +487,7 @@ test.describe.serial('Interview audio access control', () => {
           data: { userId: otherUserId }
         });
       }
-    } catch {}
+    } catch { /* best-effort cleanup */ }
   });
 });
 
@@ -607,7 +607,7 @@ test.describe.serial('JWT role revalidation', () => {
           data: { userId: adminUserId }
         });
       }
-    } catch {}
+    } catch { /* best-effort cleanup */ }
     try {
       if (userUserId) {
         await request.post(`${API}/auth/test/delete-user`, {
@@ -615,7 +615,7 @@ test.describe.serial('JWT role revalidation', () => {
           data: { userId: userUserId }
         });
       }
-    } catch {}
+    } catch { /* best-effort cleanup */ }
   });
 });
 
@@ -688,6 +688,6 @@ test.describe.serial('Token revocation & logout security', () => {
           data: { userId: revokeUserId }
         });
       }
-    } catch {}
+    } catch { /* best-effort cleanup */ }
   });
 });
