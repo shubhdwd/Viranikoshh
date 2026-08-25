@@ -18,6 +18,12 @@ export function errorHandler(
     console.error(err.stack);
   }
 
+  // CORS rejection — return 403 instead of 500
+  if (err.message === "Not allowed by CORS") {
+    sendError(res, 403, "Origin not allowed by CORS policy.");
+    return;
+  }
+
   // Prisma known error codes
   if ((err as any).code === "P2002") {
     sendError(res, 409, "A record with that value already exists.");
