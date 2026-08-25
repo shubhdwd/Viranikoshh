@@ -67,10 +67,19 @@ jobs:
       # Local throwaway DB (both point at the same service — no pgBouncer in CI).
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/viranikosh_test
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/viranikosh_test
-      JWT_SECRET: ci-test-secret-not-used-in-production
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
       JWT_EXPIRES_IN: 7d
       NODE_ENV: test
       CORS_ORIGINS: http://localhost:5173
+      PORT: 5000
+      UPLOAD_DIR: ./uploads
+      # AI Provider Keys
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
