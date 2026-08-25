@@ -21,7 +21,7 @@
 **Total tasks:** 56
 **Completed:** 51 → 56 (frontend integration endpoints added and completed) → 58 (notification actor + suggested users) → 62 (Day 15 complete)
 **Remaining:** 0
-**Last updated:** 20-Aug-2026, 23:15
+**Last updated:** 25-Aug-2026, 21:23
 
 ---
 
@@ -299,6 +299,9 @@ Schema changed: `Notification` model gained `actorId String?` field and User mod
 | 19-Aug-2026 | 17:55 | Day 14 complete: Verified rate limiting (3 tiered limiters on auth/write/global), CORS (env-driven origins + credentials), ownership checks (all 17 mutation routes audited, 0 issues). E2E suite: 23/23 passing — covers auth lifecycle, post creation, interview flow, audio access control, JWT role revalidation, token revocation. Fixed: Prisma transaction timeout 5s→30s, axios timeout 10s→30s, DB startup health check. | Completed |
 | 20-Aug-2026 | 14:15 | AI provider upgrade: Gemini 2.5→3.6 flash, added Groq text fallback (gpt-oss-120b), Cohere summarization (command-a-03-2025, 288K context), provider fallback system with health checks. 23/23 E2E tests pass, no regressions. | Completed |
 | 20-Aug-2026 | 23:15 | Day 15 complete: Demo data seeded (15 posts, 10 users, 280 likes, 168 saves, 19 follows, 12 verifications, 3 corrections, 10 notifications, 2 interviews). 7 bug fixes (trust proxy, body parser limits, optionalAuthMiddleware tokenVersion, notification try/catch ×4, health error handling, auth middleware catch). Performance: added 8 DB indexes (CulturalPost, Comment, Notification, Media, Transcript, Translation, ProcessingJob), eliminated redundant re-fetches in like/comment, added comment pagination (50), cultural map limit (500), removed email from feed payload, limited media to 3 per post. E2E: 13/13 API tests pass, TypeScript 0 errors. | Completed |
+| 25-Aug-2026 | 21:23 | Local dev run: installed backend + frontend deps, `prisma generate`, marked migration `0_init` applied (schema already on Supabase), started backend via `npx tsx src/server.ts` (nodemon exits in this shell) + Vite dev. Verified `/api/health` OK, `/api/posts/feed` 200, CORS for `localhost:5173`, and API reachable through the website proxy (`localhost:5173/api`). | Completed |
+| 25-Aug-2026 | 21:23 | Fixed Gemini provider `available:false`: a stale backend process (PID 12720) from an earlier foreground run was still holding port 5000 with the OLD `.env` (old Gemini key), so the restart couldn't bind and all health checks hit the old process. Killed the stale process, restarted backend cleanly → new `GEMINI_API_KEY` loaded; all providers (gemini/groq/cohere) now `available:true`. | Completed |
+| 25-Aug-2026 | 21:23 | Fixed frontend Vite error `Failed to resolve entry for package "framer-motion"` (thrown in `src/components/ui/Modal.tsx`): corrupted install missing `dist/es/index.mjs`. Reinstalled `framer-motion@^11.5.4`, restarted Vite to clear dep-optimization cache. `GET /src/components/ui/Modal.tsx` now transforms (HTTP 200) with no resolve error. | Completed |
 
 ---
 
