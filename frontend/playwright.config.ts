@@ -35,8 +35,10 @@ export default defineConfig({
       command: 'npx tsx src/server.ts',
       cwd: '../backend',
       port: 5000,
+      timeout: 120000,
       reuseExistingServer: true,
       env: {
+        NODE_ENV: 'test',
         GEMINI_API_BASE: 'http://127.0.0.1:3099',
         GROQ_API_BASE: 'http://127.0.0.1:3099',
         RATE_LIMIT_GENERAL_MAX: '10000',

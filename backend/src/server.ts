@@ -4,15 +4,23 @@ import { prisma } from "./utils/prisma";
 
 const PORT = process.env.PORT || 5000;
 
-const REQUIRED_ENV = [
-  "DATABASE_URL",
-  "JWT_SECRET",
-  "GROQ_API_KEY",
-  "GEMINI_API_KEY",
-  "CLOUDINARY_CLOUD_NAME",
-  "CLOUDINARY_API_KEY",
-  "CLOUDINARY_API_SECRET",
-] as const;
+// In test mode only DATABASE_URL and JWT_SECRET are required —
+// AI keys are replaced by the mock server and Cloudinary falls back to local storage.
+const IS_TEST = process.env.NODE_ENV === "test";
+
+const REQUIRED_ENV = (
+  IS_TEST
+    ? ["DATABASE_URL", "JWT_SECRET"]
+    : [
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "GROQ_API_KEY",
+        "GEMINI_API_KEY",
+        "CLOUDINARY_CLOUD_NAME",
+        "CLOUDINARY_API_KEY",
+        "CLOUDINARY_API_SECRET",
+      ]
+) as readonly string[];
 
 function validateEnv(): void {
   const missing = REQUIRED_ENV.filter((key) => !process.env[key] || process.env[key].trim() === "");
