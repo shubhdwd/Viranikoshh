@@ -1,6 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = import.meta.env['VITE_API_URL'] || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://viranikosh-e2cz.onrender.com');
+const API_BASE_URL = import.meta.env['VITE_API_URL'] || 'http://localhost:5000';
 
 export const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,

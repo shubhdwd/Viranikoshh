@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "nodemon --watch src --ext ts --exec tsx src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "npx prisma migrate deploy && node dist/server.js",
     "seed": "npx tsx src/scripts/seed-demo.ts",
     "cleanup": "npx tsx src/scripts/cleanup-test-data.ts",
@@ -45,6 +45,6 @@
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "typescript": "^5.5.4"
   }
 }
