@@ -13,9 +13,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      sessionStorage.setItem('viranikosh.signedOut', '1');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      const url: string = error.config?.url ?? '';
+      const isSessionEndpoint = url.includes('/auth/me') || url.includes('/auth/login');
+
+      if (isSessionEndpoint) {
+        sessionStorage.setItem('viranikosh.signedOut', '1');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
