@@ -166,10 +166,17 @@ export async function getFeed(
     const where: any = { published: true };
 
     // Filter by followed category interests (category names / slugs)
+    // Normalizes both sides to "lowercase-hyphenated" so "Folk Song" matches "folk-song"
     if (followedInterests.length > 0) {
-      where.category = {
-        name: { in: followedInterests, mode: "insensitive" },
-      };
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
+      const normalizedFilters = followedInterests.map(normalize);
+      const allCategories = await prisma.culturalCategory.findMany({
+        select: { id: true, name: true },
+      });
+      const matchingIds = allCategories
+        .filter((c) => normalizedFilters.includes(normalize(c.name)))
+        .map((c) => c.id);
+      where.categoryId = { in: matchingIds };
     }
 
     // Filter by followed creator user IDs

@@ -33,7 +33,7 @@ export const taxonomyApi = {
       for (const cat of cats) {
         const slug = cat.name.toLowerCase().replace(/\s+/g, '-');
         if (!seen.has(slug)) {
-          seen.set(slug, { slug: cat.name, label: formatCategoryName(cat.name) });
+          seen.set(slug, { slug, label: formatCategoryName(cat.name) });
         }
       }
       return Array.from(seen.values());
