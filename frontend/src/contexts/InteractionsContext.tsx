@@ -40,6 +40,18 @@ export function InteractionsProvider({
         setFollowedInterests(interests.map((i) => i.name));
       })
       .catch(() => { /* ignored */ });
+
+    interactionsApi.getFollowedUsers()
+      .then((following) => {
+        setFollowedCreators(following);
+      })
+      .catch(() => { /* ignored */ });
+
+    interactionsApi.getSavedPosts()
+      .then((saves) => {
+        setSaved(saves);
+      })
+      .catch(() => { /* ignored */ });
   }, [isAuthenticated]);
 
   const toggleLike = useCallback((id: string) => {

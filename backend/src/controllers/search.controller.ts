@@ -12,16 +12,43 @@ function escapeLike(value: string): string {
 }
 
 /**
+ * Normalise a query-string value into a clean string array.
+ * Axios may send: ?categories=foo  → string, or ?categories[]=foo → string[],
+ * or ?categories=foo&categories=bar → string[].
+ */
+function toArray(val: unknown): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map(String).filter(Boolean);
+  return [String(val)].filter(Boolean);
+}
+
+/**
+ * Frontend category slugs (CulturalCategory keys) → DB category names.
+ */
+const SLUG_TO_NAME: Record<string, string> = {
+  "folk-story": "Folk Story",
+  "folk-song": "Folk Song",
+  "oral-tradition": "Oral Tradition",
+  artwork: "Regional Artwork",
+  craft: "Craft",
+  festival: "Festival",
+  "local-history": "Local History",
+  "traditional-practice": "Traditional Practice",
+};
+
+/**
  * GET /api/search
  *
  * Public. Full-text search across published posts.
  * Query params:
- *   `q`        — search term (matches title, description, content)
- *   `tag`      — filter by tag name (case-insensitive partial match)
- *   `region`   — filter by region ID
- *   `category` — filter by category ID
- *   `page`     — page number (default 1)
- *   `limit`    — results per page (default 10, max 50)
+ *   `q`           — search term (matches title, description, content)
+ *   `tag` / `tags`— filter by tag name(s)
+ *   `region` / `regions` — filter by region name(s) or ID(s)
+ *   `category` / `categories` — filter by category slug(s) or ID(s)
+ *   `languages`   — filter by source language(s)
+ *   `verification`— filter by community verification status
+ *   `page`        — page number (default 1)
+ *   `limit`       — results per page (default 10, max 50)
  */
 export async function searchPosts(
   req: Request,
@@ -30,14 +57,26 @@ export async function searchPosts(
 ): Promise<void> {
   try {
     const q = (req.query.q as string || "").trim();
-    const tag = (req.query.tag as string || "").trim();
-    const region = (req.query.region as string || "").trim();
-    const category = (req.query.category as string || "").trim();
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(
       50,
       Math.max(1, parseInt(req.query.limit as string, 10) || 10)
     );
+
+    // Accept both singular and plural param names (frontend sends plural)
+    const categorySlugs = [
+      ...toArray(req.query.category),
+      ...toArray(req.query.categories),
+    ];
+    const regionValues = [
+      ...toArray(req.query.region),
+      ...toArray(req.query.regions),
+    ];
+    const tagValues = [
+      ...toArray(req.query.tag),
+      ...toArray(req.query.tags),
+    ];
+    // language/verification filters reserved for future use
 
     const where: any = { published: true };
 
@@ -51,24 +90,53 @@ export async function searchPosts(
       ];
     }
 
-    // Filter by tag (case-insensitive partial / contains match)
-    if (tag) {
-      const escapedTag = escapeLike(tag);
+    // Filter by tag(s) — case-insensitive partial match
+    if (tagValues.length > 0) {
       where.tags = {
         some: {
-          tag: { name: { contains: escapedTag, mode: "insensitive" } },
+          tag: {
+            name: { in: tagValues.map((t) => t), mode: "insensitive" },
+          },
         },
       };
     }
 
-    // Filter by region
-    if (region) {
-      where.regionId = region;
+    // Filter by region(s) — match by ID or by name (case-insensitive)
+    if (regionValues.length > 0) {
+      where.region = {
+        OR: [
+          { id: { in: regionValues } },
+          { name: { in: regionValues, mode: "insensitive" } },
+        ],
+      };
     }
 
-    // Filter by category
-    if (category) {
-      where.categoryId = category;
+    // Filter by category slug(s) — resolve to DB category IDs
+    if (categorySlugs.length > 0) {
+      // Resolve slugs to display names, then look up in DB
+      const categoryNames = categorySlugs
+        .map((s) => SLUG_TO_NAME[s] ?? s) // slug → name, or pass through if already a name/ID
+        .filter(Boolean);
+
+      // Look up categories by name (case-insensitive) OR by ID
+      const matchingCategories = await prisma.culturalCategory.findMany({
+        where: {
+          OR: [
+            { name: { in: categoryNames, mode: "insensitive" } },
+            { id: { in: categorySlugs } },
+          ],
+        },
+        select: { id: true },
+      });
+
+      if (matchingCategories.length > 0) {
+        where.categoryId = {
+          in: matchingCategories.map((c) => c.id),
+        };
+      } else {
+        // No matching categories found — return empty result
+        where.categoryId = "__NONE__";
+      }
     }
 
     const [posts, total] = await Promise.all([

@@ -19,5 +19,13 @@ export const interactionsApi = {
 
   getFollowedInterests(): Promise<Array<{ id: string; name: string }>> {
     return request({ url: '/users/me/interests', method: 'GET' }).then((data) => data.interests);
+  },
+
+  getFollowedUsers(): Promise<string[]> {
+    return request({ url: '/users/me/following', method: 'GET' }).then((data) => data.following);
+  },
+
+  getSavedPosts(): Promise<string[]> {
+    return request({ url: '/users/me/saves', method: 'GET' }).then((data) => data.saves);
   }
 };

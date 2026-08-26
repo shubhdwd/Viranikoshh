@@ -34,10 +34,12 @@ const ACTIONS: {
 interface VerificationPanelProps {
   record: CulturalRecord;
   className?: string;
+  onAction?: (recordId: string) => void;
 }
 export function VerificationPanel({
   record,
-  className
+  className,
+  onAction
 }: VerificationPanelProps) {
   const {
     user,
@@ -84,6 +86,7 @@ export function VerificationPanel({
       setConfirmation(open === 'verify' ? "Your verification was recorded. It is now part of this record's history." : open === 'flag' ? 'Flag raised. A moderator will review this record.' : 'Thank you — your contribution was added to the community layer.');
       setNote('');
       setOpen(null);
+      onAction?.(record.id);
     } catch {
       /* submission failed — user can retry */
     } finally {

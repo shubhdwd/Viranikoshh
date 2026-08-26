@@ -99,6 +99,58 @@ export async function getMyInterests(
 }
 
 /**
+ * GET /api/users/me/following
+ *
+ * Auth required. Returns the list of user IDs the current user follows.
+ */
+export async function getMyFollowing(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.id;
+
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+
+    sendSuccess(res, 200, "Following fetched successfully.", {
+      following: follows.map((f) => f.followingId),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/users/me/saves
+ *
+ * Auth required. Returns the list of post IDs the current user has saved.
+ */
+export async function getMySaves(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.id;
+
+    const saves = await prisma.save.findMany({
+      where: { userId },
+      select: { postId: true },
+    });
+
+    sendSuccess(res, 200, "Saves fetched successfully.", {
+      saves: saves.map((s) => s.postId),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * GET /api/users/suggested
  *
  * Auth required. Returns 4-6 users the current user doesn't already follow,

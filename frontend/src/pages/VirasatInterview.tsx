@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircle2Icon, Loader2Icon, SparklesIcon } from 'lucide-react';
 import { interviewApi } from '../api/interviewApi';
+import { postsApi } from '../api/postsApi';
+import { useAsync } from '../hooks/useAsync';
 import { useAIProcessing } from '../hooks/useAIProcessing';
 import type { InterviewAnswer } from '../types/interview';
 import { useScreenInit } from '../useScreenInit.js';
@@ -61,7 +63,13 @@ export function VirasatInterview() {
   });
   const [recorderKey, setRecorderKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
   const topic = interviewTopics.find((t) => t.id === topicId);
+
+  const createdRecord = useAsync(
+    () => createdRecordId ? postsApi.getById(createdRecordId) : Promise.resolve(null),
+    [createdRecordId]
+  );
 
   const beginInterview = async () => {
     if (!topicId) return;
@@ -127,7 +135,14 @@ export function VirasatInterview() {
     setPhase('processing');
     ai.start();
     if (interviewId) {
-      await interviewApi.complete(interviewId);
+      try {
+        const result = await interviewApi.complete(interviewId);
+        if (result.recordId) {
+          setCreatedRecordId(result.recordId);
+        }
+      } catch {
+        /* complete may fail but the interview still happened */
+      }
     }
   };
 
@@ -272,6 +287,12 @@ export function VirasatInterview() {
                 <p className="mt-1.5 text-sm text-charcoal-muted">
                   {answeredCount} recorded {answeredCount === 1 ? 'answer' : 'answers'}, kept in {language}, awaiting community review.
                 </p>
+                {createdRecordId && (
+                  <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate(`/post/${createdRecordId}`)}>
+                    View the cultural record
+                    <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                )}
               </div>
 
               <div className="rounded-card border border-sand-light border-l-[3px] border-l-charcoal bg-paper p-5">
@@ -292,15 +313,47 @@ export function VirasatInterview() {
                 </div>
               </div>
 
-              <div className="rounded-card border border-ai-border border-l-[3px] border-l-ai bg-ai-soft/60 p-5">
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ai">
-                  <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                  AI translation & summary
-                </p>
-                <p className="mt-3 text-[14px] leading-relaxed text-charcoal-muted">
-                  AI processing will add transcript, translation and tags once the interview is fully processed.
-                </p>
-              </div>
+              {createdRecord.data ? (
+                <div className="rounded-card border border-ai-border border-l-[3px] border-l-ai bg-ai-soft/60 p-5">
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ai">
+                    <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    AI translation & summary
+                  </p>
+                  {createdRecord.data.ai?.summary && (
+                    <p className="mt-3 text-[14px] leading-relaxed text-charcoal-muted">
+                      {createdRecord.data.ai.summary}
+                    </p>
+                  )}
+                  {createdRecord.data.source?.transcript && (
+                    <div className="mt-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-charcoal-soft">Transcript</p>
+                      <p className="mt-1 text-[13px] leading-relaxed text-charcoal">{createdRecord.data.source.transcript}</p>
+                    </div>
+                  )}
+                  {createdRecord.data.tags && createdRecord.data.tags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {createdRecord.data.tags.map((tag) => (
+                        <span key={tag} className="rounded-full bg-ai/10 px-2.5 py-1 text-[11px] font-medium text-ai">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  {!createdRecord.data.ai?.summary && !createdRecord.data.source?.transcript && (
+                    <p className="mt-3 text-[14px] leading-relaxed text-charcoal-muted">
+                      AI processing will add transcript, translation and tags once the interview is fully processed.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-card border border-ai-border border-l-[3px] border-l-ai bg-ai-soft/60 p-5">
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ai">
+                    <SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    AI translation & summary
+                  </p>
+                  <p className="mt-3 text-[14px] leading-relaxed text-charcoal-muted">
+                    AI processing will add transcript, translation and tags once the interview is fully processed.
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => navigate('/home')}>Back to the feed</Button>

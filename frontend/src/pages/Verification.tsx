@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { BadgeCheckIcon, ShieldCheckIcon } from 'lucide-react';
 import { verificationApi } from '../api/verificationApi';
@@ -18,13 +18,19 @@ export function Verification() {
   const { isAuthenticated } = useAuth();
   const {
     data,
-    loading
+    loading,
+    reload
   } = useAsync(() => isAuthenticated ? verificationApi.queue() : Promise.resolve(null), [isAuthenticated]);
   const [status, setStatus] = useState<VerificationStatus | null>(null);
   const items = useMemo(() => {
     const all = data ?? [];
     return status ? all.filter((r) => r.community.status === status) : all;
   }, [data, status]);
+
+  const handleAction = useCallback((_recordId: string) => {
+    // Re-fetch the queue so acted-upon records update their status
+    reload();
+  }, [reload]);
   return <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:py-8">
       <SectionHeading level={1} title="Community verification" description="Records waiting on someone who knows the tradition." />
 
@@ -72,7 +78,7 @@ export function Verification() {
                 </p>
               </div>
             </div>
-            <VerificationPanel record={record} className="rounded-none border-x-0 border-b-0" />
+            <VerificationPanel record={record} className="rounded-none border-x-0 border-b-0" onAction={handleAction} />
           </article>)}
       </div>
     </div>;
