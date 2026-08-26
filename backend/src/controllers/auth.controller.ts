@@ -12,7 +12,11 @@ function setAuthCookie(res: Response, token: string): void {
   res.cookie("auth_token", token, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "lax",
+    // "none" is required in production so the cookie is sent on cross-origin
+    // fetch/XHR requests (Vercel frontend → Render API).  In development the
+    // Vite proxy makes requests same-origin, so "lax" is fine and avoids the
+    // "Secure" requirement that "none" imposes.
+    sameSite: isProd ? "none" : "lax",
     path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
@@ -22,7 +26,7 @@ function clearAuthCookie(res: Response): void {
   res.clearCookie("auth_token", {
     httpOnly: true,
     secure: isProd,
-    sameSite: "lax",
+    sameSite: isProd ? "none" : "lax",
     path: "/",
   });
 }

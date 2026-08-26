@@ -59,12 +59,13 @@ export const uploadApi = {
   uploadMedia(postId: string, file: Blob, fileName: string): Promise<{mediaUrl: string; postId: string;}> {
     const form = new FormData();
     form.append('file', file, fileName);
+    // Do NOT manually set Content-Type — axios auto-detects FormData and
+    // sets the correct header including the multipart boundary string.
     return request({
       url: '/uploads',
       method: 'POST',
       params: { postId },
       data: form,
-      headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
 

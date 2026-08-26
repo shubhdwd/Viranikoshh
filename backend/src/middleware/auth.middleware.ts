@@ -27,16 +27,25 @@ export async function authMiddleware(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
+    const hasBearer = Boolean(authHeader && authHeader.startsWith("Bearer "));
+    const hasCookie = Boolean(req.cookies?.auth_token);
+    const rawCookieHeader = req.headers.cookie ?? "(none)";
 
     let token: string | undefined;
 
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    } else if (req.cookies?.auth_token) {
+    if (hasBearer) {
+      token = authHeader!.split(" ")[1];
+    } else if (hasCookie) {
       token = req.cookies.auth_token;
     }
 
     if (!token) {
+      console.warn(
+        `[AUTH] No token — method=${req.method} url=${req.originalUrl}` +
+        ` hasBearer=${hasBearer} hasCookie=${hasCookie}` +
+        ` origin=${req.headers.origin ?? "(none)"}` +
+        ` rawCookie=${rawCookieHeader}`
+      );
       sendError(res, 401, "Access denied. No token provided.");
       return;
     }
