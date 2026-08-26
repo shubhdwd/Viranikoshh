@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { interactionsApi } from '../api/interactionsApi';
+import { useAuth } from './AuthContext';
 import { CATEGORY_NAME_TO_ID } from '../types/culture';
 
 interface InteractionsValue {
@@ -26,21 +27,25 @@ function toggle(list: string[], value: string): string[] {
 export function InteractionsProvider({
   children
 }: {children: React.ReactNode;}) {
+  const { isAuthenticated } = useAuth();
   const [liked, setLiked] = useState<string[]>([]);
   const [saved, setSaved] = useState<string[]>([]);
   const [followedCreators, setFollowedCreators] = useState<string[]>([]);
   const [followedInterests, setFollowedInterests] = useState<string[]>([]);
 
   useEffect(() => {
-    interactionsApi.getFollowedInterests().then((interests) => {
-      setFollowedInterests(interests.map((i) => i.name));
-    });
-  }, []);
+    if (!isAuthenticated) return;
+    interactionsApi.getFollowedInterests()
+      .then((interests) => {
+        setFollowedInterests(interests.map((i) => i.name));
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   const toggleLike = useCallback((id: string) => {
     setLiked((prev) => {
       const next = toggle(prev, id);
-      void interactionsApi.like(id, next.includes(id));
+      interactionsApi.like(id, next.includes(id)).catch(() => {});
       return next;
     });
   }, []);
@@ -48,7 +53,7 @@ export function InteractionsProvider({
   const toggleSave = useCallback((id: string) => {
     setSaved((prev) => {
       const next = toggle(prev, id);
-      void interactionsApi.save(id, next.includes(id));
+      interactionsApi.save(id, next.includes(id)).catch(() => {});
       return next;
     });
   }, []);
@@ -56,7 +61,7 @@ export function InteractionsProvider({
   const toggleFollowCreator = useCallback((id: string) => {
     setFollowedCreators((prev) => {
       const next = toggle(prev, id);
-      void interactionsApi.followUser(id, next.includes(id));
+      interactionsApi.followUser(id, next.includes(id)).catch(() => {});
       return next;
     });
   }, []);
@@ -66,7 +71,7 @@ export function InteractionsProvider({
     if (!categoryId) return;
     setFollowedInterests((prev) => {
       const next = toggle(prev, interest);
-      void interactionsApi.followInterest(categoryId, next.includes(interest));
+      interactionsApi.followInterest(categoryId, next.includes(interest)).catch(() => {});
       return next;
     });
   }, []);
