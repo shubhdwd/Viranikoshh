@@ -133,7 +133,12 @@ export async function createPost(
  * GET /api/posts/feed
  *
  * Public. Paginated feed of published posts, newest first.
- * Query params: `page` (default 1), `limit` (default 10, max 50).
+ * Query params:
+ *   `page`              — page number (default 1)
+ *   `limit`             — results per page (default 10, max 50)
+ *   `featured`          — if truthy, return top 6 posts sorted by like count
+ *   `followedInterests` — comma-separated category names to filter by
+ *   `followedCreators`  — comma-separated user IDs to filter by
  */
 export async function getFeed(
   req: Request,
@@ -146,8 +151,45 @@ export async function getFeed(
       50,
       Math.max(1, parseInt(req.query.limit as string, 10) || 10)
     );
+    const featured = Boolean(req.query.featured);
 
-    const where = { published: true };
+    // Parse comma-separated filter arrays
+    const followedInterests = (req.query.followedInterests as string || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const followedCreators = (req.query.followedCreators as string || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const where: any = { published: true };
+
+    // Filter by followed category interests (category names / slugs)
+    if (followedInterests.length > 0) {
+      where.category = {
+        name: { in: followedInterests, mode: "insensitive" },
+      };
+    }
+
+    // Filter by followed creator user IDs
+    if (followedCreators.length > 0) {
+      where.userId = { in: followedCreators };
+    }
+
+    // Featured mode: top 6 by like count
+    if (featured) {
+      const posts = await prisma.culturalPost.findMany({
+        where,
+        select: POST_SELECT,
+        orderBy: { likes: { _count: "desc" } },
+        take: 6,
+      });
+      sendSuccess(res, 200, "Featured feed fetched successfully.", {
+        posts: posts.map(formatPost),
+      });
+      return;
+    }
 
     const [posts, total] = await Promise.all([
       prisma.culturalPost.findMany({

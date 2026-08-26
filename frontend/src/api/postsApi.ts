@@ -80,7 +80,15 @@ export const postsApi = {
   // Paginated feed — returns records plus the server's pagination metadata so
   // the caller can append further pages.
   getFeedPage(params: FeedParams, page = 1): Promise<PaginatedRecords> {
-    return request({ url: '/posts/feed', method: 'GET', params: { ...params, page } }).then((data) => ({
+    // Join arrays into comma-separated strings for backend query parsing
+    const queryParams: Record<string, string> = { page: String(page) };
+    if (params.followedInterests.length > 0) {
+      queryParams['followedInterests'] = params.followedInterests.join(',');
+    }
+    if (params.followedCreators.length > 0) {
+      queryParams['followedCreators'] = params.followedCreators.join(',');
+    }
+    return request({ url: '/posts/feed', method: 'GET', params: queryParams }).then((data) => ({
       records: data.posts.map(transformPost),
       pagination: data.pagination as Pagination
     }));
