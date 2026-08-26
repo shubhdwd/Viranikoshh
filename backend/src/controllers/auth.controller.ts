@@ -6,27 +6,42 @@ import { sendSuccess, sendError } from "../utils/apiResponse";
 import { registerSchema, loginSchema } from "../validators/auth.validator";
 import { ZodError } from "zod";
 
-const isProd = process.env.NODE_ENV === "production";
+// Detect whether we're running on a deployed host (Render, Railway, Fly, etc.)
+// rather than a local dev machine.  NODE_ENV alone is unreliable because the
+// .env file ships with NODE_ENV=development and Render may not override it.
+const isDeployed =
+  process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
+const cookieSecure = isDeployed; // Render always serves over HTTPS
+const cookieSameSite: "none" | "lax" = isDeployed ? "none" : "lax";
+
+console.log(
+  "[AUTH] Cookie config -",
+  "NODE_ENV=" + process.env.NODE_ENV,
+  "RENDER=" + (process.env.RENDER || "(unset)"),
+  "isDeployed=" + isDeployed,
+  "secure=" + cookieSecure,
+  "sameSite=" + cookieSameSite
+);
+
+const isProd = isDeployed;
 
 function setAuthCookie(res: Response, token: string): void {
-  res.cookie("auth_token", token, {
+  const opts = {
     httpOnly: true,
-    secure: isProd,
-    // "none" is required in production so the cookie is sent on cross-origin
-    // fetch/XHR requests (Vercel frontend → Render API).  In development the
-    // Vite proxy makes requests same-origin, so "lax" is fine and avoids the
-    // "Secure" requirement that "none" imposes.
-    sameSite: isProd ? "none" : "lax",
+    secure: cookieSecure,
+    sameSite: cookieSameSite,
     path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  };
+  console.log("[AUTH] setAuthCookie options:", JSON.stringify(opts));
+  res.cookie("auth_token", token, opts);
 }
 
 function clearAuthCookie(res: Response): void {
   res.clearCookie("auth_token", {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    secure: cookieSecure,
+    sameSite: cookieSameSite,
     path: "/",
   });
 }
