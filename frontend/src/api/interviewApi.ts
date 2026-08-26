@@ -21,8 +21,7 @@ export const interviewApi = {
       url: `/interviews/${interviewId}/audio`,
       method: 'POST',
       params: { questionId },
-      data: form,
-      headers: { 'Content-Type': 'multipart/form-data' }
+      data: form
     });
   },
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BadgeCheckIcon, ShieldCheckIcon } from 'lucide-react';
 import { verificationApi } from '../api/verificationApi';
 import { useAsync } from '../hooks/useAsync';
+import { useAuth } from '../contexts/AuthContext';
 import { VerificationPanel } from '../components/VerificationPanel';
 import { VerificationBadge } from '../components/VerificationBadge';
 import { SectionHeading } from '../components/ui/SectionHeading';
@@ -14,10 +15,11 @@ import { CATEGORY_LABELS } from '../types/culture';
 import { VERIFICATION_LABELS, type VerificationStatus } from '../types/verification';
 const FILTERS: VerificationStatus[] = ['pending', 'correction-suggested', 'flagged'];
 export function Verification() {
+  const { isAuthenticated } = useAuth();
   const {
     data,
     loading
-  } = useAsync(() => verificationApi.queue(), []);
+  } = useAsync(() => isAuthenticated ? verificationApi.queue() : Promise.resolve(null), [isAuthenticated]);
   const [status, setStatus] = useState<VerificationStatus | null>(null);
   const items = useMemo(() => {
     const all = data ?? [];

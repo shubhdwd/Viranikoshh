@@ -3,6 +3,7 @@ import { isToday } from 'date-fns';
 import { BellIcon } from 'lucide-react';
 import { notificationApi } from '../api/notificationApi';
 import { useAsync } from '../hooks/useAsync';
+import { useAuth } from '../contexts/AuthContext';
 import { NotificationItem } from '../components/NotificationItem';
 import { SectionHeading } from '../components/ui/SectionHeading';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -10,10 +11,11 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import type { CulturalNotification } from '../types/notification';
 export function Notifications() {
+  const { isAuthenticated } = useAuth();
   const {
     data,
     loading
-  } = useAsync(() => notificationApi.list(), []);
+  } = useAsync(() => isAuthenticated ? notificationApi.list() : Promise.resolve(null), [isAuthenticated]);
   const [readAll, setReadAll] = useState(false);
   const items: CulturalNotification[] = (data ?? []).map((n) => readAll ? {
     ...n,
@@ -24,7 +26,7 @@ export function Notifications() {
   const unread = items.filter((n) => !n.read).length;
   return <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
       <SectionHeading level={1} title="Notifications" description="Activity on your contributions." action={unread > 0 ? <Button variant="ghost" size="sm" onClick={async () => {
-      await notificationApi.markAllRead();
+      await notificationApi.markAllRead().catch(() => {});
       setReadAll(true);
     }}>
               Mark all read

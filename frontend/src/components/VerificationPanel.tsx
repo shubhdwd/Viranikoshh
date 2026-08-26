@@ -40,7 +40,8 @@ export function VerificationPanel({
   className
 }: VerificationPanelProps) {
   const {
-    user
+    user,
+    isAuthenticated
   } = useAuth();
   const [open, setOpen] = useState<VerificationAction | null>(null);
   const [note, setNote] = useState('');
@@ -52,6 +53,7 @@ export function VerificationPanel({
   // Load the persisted verification history (verify / flag / context / correct)
   // so it survives refreshes — the feed payload doesn't carry it.
   useEffect(() => {
+    if (!isAuthenticated) return;
     let cancelled = false;
     verificationApi
       .listVerifications(record.id)
@@ -64,7 +66,7 @@ export function VerificationPanel({
     return () => {
       cancelled = true;
     };
-  }, [record.id]);
+  }, [record.id, isAuthenticated]);
 
   const history = [...record.community.history, ...serverEvents, ...localEvents].sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
   const isOwner = user?.id === record.creatorId;
@@ -79,9 +81,11 @@ export function VerificationPanel({
     try {
       const event = await verificationApi.submit(record.id, open, note, user.id);
       setLocalEvents((prev) => [...prev, event]);
-      setConfirmation(open === 'verify' ? 'Your verification was recorded. It is now part of this record’s history.' : open === 'flag' ? 'Flag raised. A moderator will review this record.' : 'Thank you — your contribution was added to the community layer.');
+      setConfirmation(open === 'verify' ? 'Your verification was recorded. It is now part of this record's history.' : open === 'flag' ? 'Flag raised. A moderator will review this record.' : 'Thank you — your contribution was added to the community layer.');
       setNote('');
       setOpen(null);
+    } catch {
+      /* submission failed — user can retry */
     } finally {
       setSending(false);
     }
