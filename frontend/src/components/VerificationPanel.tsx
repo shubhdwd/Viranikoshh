@@ -81,7 +81,7 @@ export function VerificationPanel({
     try {
       const event = await verificationApi.submit(record.id, open, note, user.id);
       setLocalEvents((prev) => [...prev, event]);
-      setConfirmation(open === 'verify' ? 'Your verification was recorded. It is now part of this record's history.' : open === 'flag' ? 'Flag raised. A moderator will review this record.' : 'Thank you — your contribution was added to the community layer.');
+      setConfirmation(open === 'verify' ? "Your verification was recorded. It is now part of this record's history." : open === 'flag' ? 'Flag raised. A moderator will review this record.' : 'Thank you — your contribution was added to the community layer.');
       setNote('');
       setOpen(null);
     } catch {
