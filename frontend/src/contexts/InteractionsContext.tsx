@@ -39,13 +39,13 @@ export function InteractionsProvider({
       .then((interests) => {
         setFollowedInterests(interests.map((i) => i.name));
       })
-      .catch(() => {});
+      .catch(() => { /* ignored */ });
   }, [isAuthenticated]);
 
   const toggleLike = useCallback((id: string) => {
     setLiked((prev) => {
       const next = toggle(prev, id);
-      interactionsApi.like(id, next.includes(id)).catch(() => {});
+      interactionsApi.like(id, next.includes(id)).catch(() => { /* ignored */ });
       return next;
     });
   }, []);
@@ -53,7 +53,7 @@ export function InteractionsProvider({
   const toggleSave = useCallback((id: string) => {
     setSaved((prev) => {
       const next = toggle(prev, id);
-      interactionsApi.save(id, next.includes(id)).catch(() => {});
+      interactionsApi.save(id, next.includes(id)).catch(() => { /* ignored */ });
       return next;
     });
   }, []);
@@ -61,7 +61,7 @@ export function InteractionsProvider({
   const toggleFollowCreator = useCallback((id: string) => {
     setFollowedCreators((prev) => {
       const next = toggle(prev, id);
-      interactionsApi.followUser(id, next.includes(id)).catch(() => {});
+      interactionsApi.followUser(id, next.includes(id)).catch(() => { /* ignored */ });
       return next;
     });
   }, []);
@@ -71,7 +71,7 @@ export function InteractionsProvider({
     if (!categoryId) return;
     setFollowedInterests((prev) => {
       const next = toggle(prev, interest);
-      interactionsApi.followInterest(categoryId, next.includes(interest)).catch(() => {});
+      interactionsApi.followInterest(categoryId, next.includes(interest)).catch(() => { /* ignored */ });
       return next;
     });
   }, []);

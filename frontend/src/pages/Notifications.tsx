@@ -26,7 +26,7 @@ export function Notifications() {
   const unread = items.filter((n) => !n.read).length;
   return <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
       <SectionHeading level={1} title="Notifications" description="Activity on your contributions." action={unread > 0 ? <Button variant="ghost" size="sm" onClick={async () => {
-      await notificationApi.markAllRead().catch(() => {});
+      await notificationApi.markAllRead().catch(() => { /* ignored */ });
       setReadAll(true);
     }}>
               Mark all read
