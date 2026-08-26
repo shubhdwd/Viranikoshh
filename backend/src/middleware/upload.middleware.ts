@@ -105,11 +105,28 @@ const upload = multer({
  */
 export function uploadSingle(fieldName: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
+    console.log(
+      "[UPLOAD] Pre-multer -",
+      "content-type=" + (req.headers["content-type"] || "(missing)"),
+      "content-length=" + (req.headers["content-length"] || "(missing)"),
+      "field=" + fieldName
+    );
+
     upload.single(fieldName)(req, res, (err: unknown) => {
       if (!err) {
+        console.log(
+          "[UPLOAD] Multer OK -",
+          "file=" + (req.file ? "yes" : "NO"),
+          "mimetype=" + (req.file?.mimetype || "n/a"),
+          "size=" + (req.file?.size || "n/a"),
+          "originalname=" + (req.file?.originalname || "n/a"),
+          "postId=" + (req.body?.postId || req.query?.postId || "n/a")
+        );
         next();
         return;
       }
+
+      console.error("[UPLOAD] Multer error:", err);
 
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {

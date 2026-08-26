@@ -57,12 +57,16 @@ export async function uploadMedia(
   next: NextFunction
 ): Promise<void> {
   try {
+    const postIdRaw = (req.body.postId || req.query.postId || "") as string;
+    console.log("[UPLOAD CTRL] postIdRaw=" + JSON.stringify(postIdRaw), "body.postId=" + JSON.stringify(req.body?.postId), "query.postId=" + JSON.stringify(req.query?.postId));
+
     const parsed: UploadInput = uploadSchema.parse({
-      postId: (req.body.postId || req.query.postId || "") as string,
+      postId: postIdRaw,
     });
     const file = req.file;
 
     if (!file) {
+      console.error("[UPLOAD CTRL] No file received. content-type=" + (req.headers["content-type"] || "(missing)"), "body keys=" + Object.keys(req.body || {}));
       sendError(
         res,
         400,

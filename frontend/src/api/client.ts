@@ -9,6 +9,18 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
+// When sending FormData (file uploads), the instance-level Content-Type
+// "application/json" must be removed so the browser can set the correct
+// "multipart/form-data; boundary=..." header. Without this, multer
+// receives a JSON Content-Type and ignores the multipart body entirely,
+// causing a 400 "No file uploaded" on every upload attempt.
+apiClient.interceptors.request.use((config) => {
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  return config;
+});
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
