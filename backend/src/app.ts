@@ -38,6 +38,7 @@ app.use((_req, res, next) => {
 // CORS configuration
 const allowedOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
+  .map((o) => o.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
 // Always allow localhost in development
@@ -45,18 +46,21 @@ if (process.env.NODE_ENV === "development") {
   allowedOrigins.push("http://localhost:3000", "http://localhost:5173");
 }
 
+console.log("[CORS] Allowed origins:", allowedOrigins);
+
 app.use(
   cors({
     origin(origin, callback) {
-      // In development, allow localhost origins and requests with no origin (curl, Postman)
-      if (process.env.NODE_ENV !== "production" && !origin) {
+      // Allow requests with no Origin header (server-to-server, curl, health checks)
+      if (!origin) {
         callback(null, true);
         return;
       }
-      // In production, require an explicit allowed origin
-      if (origin && allowedOrigins.includes(origin)) {
+      const normalized = origin.trim().replace(/\/+$/, "");
+      if (allowedOrigins.includes(normalized)) {
         callback(null, true);
       } else {
+        console.warn("[CORS] Rejected origin:", JSON.stringify(normalized), "| Allowed:", JSON.stringify(allowedOrigins));
         callback(new Error("Not allowed by CORS"));
       }
     },
