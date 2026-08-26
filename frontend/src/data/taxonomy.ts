@@ -94,6 +94,29 @@ export const INTERESTS = [
 'Instrument making',
 'Local history'];
 
+/**
+ * Maps interest display names (from INTERESTS) to category slugs
+ * stored in the `culturalCategory` DB table (name field).
+ * Used by InteractionsContext to follow/unfollow interests.
+ */
+export const INTEREST_TO_CATEGORY: Record<string, string> = {
+  'Folk songs': 'folk-song',
+  'Oral storytelling': 'folk-story',
+  'Tribal art': 'artwork',
+  'Textile craft': 'craft',
+  'Ritual performance': 'traditional-practice',
+  'Village festivals': 'festival',
+  'Pottery & clay': 'craft',
+  'Regional cuisine lore': 'folk-story',
+  'Instrument making': 'craft',
+  'Local history': 'local-history',
+};
+
+/** Reverse map: category slug → interest display name */
+export const CATEGORY_TO_INTEREST: Record<string, string> = Object.fromEntries(
+  Object.entries(INTEREST_TO_CATEGORY).map(([interest, slug]) => [slug, interest])
+);
+
 
 export const MEDIA_TYPE_LABELS: Record<string, string> = {
   image: 'Image',
