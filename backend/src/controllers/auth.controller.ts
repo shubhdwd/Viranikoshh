@@ -40,6 +40,9 @@ export async function register(
 ): Promise<void> {
   try {
     // 1. Validate input
+    console.log("[Register] Request body keys:", Object.keys(req.body));
+    console.log("[Register] Received:", JSON.stringify({ ...req.body, password: req.body.password ? "***" : undefined }));
+
     const parsed = registerSchema.parse(req.body);
 
     // 2. Check if email already exists
@@ -55,14 +58,17 @@ export async function register(
     // 3. Hash password
     const hashedPassword = await hashPassword(parsed.password);
 
-    // 4. Create user + empty profile
+    // 4. Create user + profile with optional fields
     const user = await prisma.user.create({
       data: {
         name: parsed.name,
         email: parsed.email,
         password: hashedPassword,
         profile: {
-          create: {}, // empty profile, user can fill later
+          create: {
+            region: parsed.region,
+            languages: parsed.languages ?? [],
+          },
         },
       },
       select: {
@@ -74,6 +80,20 @@ export async function register(
         profile: true,
       },
     });
+
+    // 4b. Link cultural interests (lookup CulturalCategory by name)
+    if (parsed.interests && parsed.interests.length > 0) {
+      const categories = await prisma.culturalCategory.findMany({
+        where: { name: { in: parsed.interests } },
+        select: { id: true },
+      });
+      if (categories.length > 0) {
+        await prisma.interest.createMany({
+          data: categories.map((c) => ({ userId: user.id, categoryId: c.id })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     // 5. Sign JWT (fetch tokenVersion separately — not exposed to client)
     const dbUser = await prisma.user.findUnique({

@@ -22,11 +22,18 @@ export function Register() {
   const [interests, setInterests] = useState<string[]>([]);
   const [touched, setTouched] = useState(false);
   const interestsValid = interests.length >= 3;
+  const passwordRules = {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasDigit: /[0-9]/.test(password),
+  };
+  const passwordValid = passwordRules.minLength && passwordRules.hasUpper && passwordRules.hasLower && passwordRules.hasDigit;
   const toggle = (list: string[], value: string) => list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    if (!interestsValid) return;
+    if (!interestsValid || !passwordValid) return;
     try {
       await register({
         name,
@@ -58,10 +65,16 @@ export function Register() {
               <Field label="Email" required>
                 <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
               </Field>
-              <Field label="Password" hint="6+ characters" required>
+              <Field label="Password" hint="8+ chars, A-Z, a-z, 0-9" required>
                 <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
               </Field>
             </div>
+
+            {touched && password.length > 0 && !passwordValid && (
+              <p className="text-[13px] text-flagged">
+                Password must be 8+ characters with at least one uppercase, one lowercase, and one number.
+              </p>
+            )}
 
             <Field label="Your region" required>
               <Select value={region} onChange={(e) => setRegion(e.target.value)}>

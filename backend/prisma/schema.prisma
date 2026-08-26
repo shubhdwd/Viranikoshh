@@ -39,6 +39,8 @@ model Profile {
   bio       String?
   avatar    String?
   location  String?
+  region    String?
+  languages String[] @default([])
   userId    String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

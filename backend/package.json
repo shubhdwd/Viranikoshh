@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "npx prisma migrate deploy && node dist/server.js",
     "seed": "npx tsx src/scripts/seed-demo.ts",
     "cleanup": "npx tsx src/scripts/cleanup-test-data.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
