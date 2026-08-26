@@ -1,6 +1,5 @@
 import { request } from './client';
 import type { CulturalComment, CulturalRecord } from '../types/culture';
-import { CATEGORY_NAME_TO_ID } from '../types/culture';
 import { resolveMedia } from '../utils/media';
 
 export interface FeedParams {
@@ -24,7 +23,7 @@ export interface PaginatedRecords {
 
 function transformPost(post: any): CulturalRecord {
   const apiUser = post.user;
-  const category = CATEGORY_NAME_TO_ID[post.category?.name] || 'folk-song';
+  const category = (post.category?.name as CulturalRecord['category']) || 'folk-song';
   const transcript = post.source?.transcript || post.content || '';
   return {
     id: post.id,

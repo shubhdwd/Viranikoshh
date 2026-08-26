@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AlertCircleIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { taxonomyApi } from '../api/taxonomyApi';
+import { useAsync } from '../hooks/useAsync';
 import { Button } from '../components/ui/Button';
 import { Field, Select, TextInput } from '../components/ui/Field';
 import { Chip } from '../components/ui/Chip';
 import { AuthAside } from '../components/AuthAside';
-import { INTERESTS, LANGUAGES, REGIONS } from '../data/taxonomy';
+import { LANGUAGES, REGIONS } from '../data/taxonomy';
 export function Register() {
   const {
     register,
@@ -14,6 +16,7 @@ export function Register() {
     error
   } = useAuth();
   const navigate = useNavigate();
+  const { data: categories } = useAsync(() => taxonomyApi.getInterestCategories(), []);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -92,7 +95,7 @@ export function Register() {
 
             <Field label="Cultural interests" hint="Choose at least 3" error={touched && !interestsValid ? 'Select at least three interests to seed your feed.' : undefined}>
               <div className="flex flex-wrap gap-1.5">
-                {INTERESTS.map((interest) => <Chip key={interest} label={interest} selected={interests.includes(interest)} onClick={() => setInterests((prev) => toggle(prev, interest))} />)}
+                {categories?.map((cat) => <Chip key={cat.slug} label={cat.label} selected={interests.includes(cat.slug)} onClick={() => setInterests((prev) => toggle(prev, cat.slug))} />)}
               </div>
             </Field>
 

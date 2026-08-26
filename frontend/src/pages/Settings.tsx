@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { CheckIcon } from 'lucide-react';
 import { usersApi } from '../api/usersApi';
+import { taxonomyApi } from '../api/taxonomyApi';
 import { useAuth } from '../contexts/AuthContext';
+import { useAsync } from '../hooks/useAsync';
 import { useInteractions } from '../contexts/InteractionsContext';
-import { INTERESTS, LANGUAGES, REGIONS } from '../data/taxonomy';
+import { LANGUAGES, REGIONS } from '../data/taxonomy';
 import { SectionHeading } from '../components/ui/SectionHeading';
 import { Button } from '../components/ui/Button';
 import { Field, Select, TextArea, TextInput } from '../components/ui/Field';
@@ -35,6 +37,7 @@ export function Settings() {
     followedInterests,
     toggleFollowInterest
   } = useInteractions();
+  const { data: categories } = useAsync(() => taxonomyApi.getInterestCategories(), []);
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [region, setRegion] = useState(user?.region ?? REGIONS[0]);
@@ -101,7 +104,7 @@ export function Settings() {
           <h2 className="font-display text-[15px] font-semibold text-charcoal">Cultural interests</h2>
           <p className="mt-1 text-[13px] text-charcoal-muted">What your feed prioritises.</p>
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {INTERESTS.map((interest) => <Chip key={interest} label={interest} selected={followedInterests.includes(interest)} onClick={() => toggleFollowInterest(interest)} />)}
+            {categories?.map((cat) => <Chip key={cat.slug} label={cat.label} selected={followedInterests.includes(cat.slug)} onClick={() => toggleFollowInterest(cat.slug)} />)}
           </div>
         </Card>
 

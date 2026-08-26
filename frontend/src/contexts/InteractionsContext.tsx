@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { interactionsApi } from '../api/interactionsApi';
 import { useAuth } from './AuthContext';
-import { INTEREST_TO_CATEGORY, CATEGORY_TO_INTEREST } from '../data/taxonomy';
 
 interface InteractionsValue {
   liked: string[];
@@ -37,8 +36,8 @@ export function InteractionsProvider({
     if (!isAuthenticated) return;
     interactionsApi.getFollowedInterests()
       .then((interests) => {
-        // Backend returns category slugs (e.g. "folk-song"); map to display names (e.g. "Folk songs")
-        setFollowedInterests(interests.map((i) => CATEGORY_TO_INTEREST[i.name] ?? i.name));
+        // Backend returns category names (e.g. "folk-song") — store as-is for slug matching
+        setFollowedInterests(interests.map((i) => i.name));
       })
       .catch(() => { /* ignored */ });
 
@@ -79,12 +78,11 @@ export function InteractionsProvider({
     });
   }, []);
 
-  const toggleFollowInterest = useCallback((interest: string) => {
-    const categorySlug = INTEREST_TO_CATEGORY[interest];
+  const toggleFollowInterest = useCallback((categorySlug: string) => {
     if (!categorySlug) return;
     setFollowedInterests((prev) => {
-      const next = toggle(prev, interest);
-      interactionsApi.followInterest(categorySlug, next.includes(interest)).catch(() => { /* ignored */ });
+      const next = toggle(prev, categorySlug);
+      interactionsApi.followInterest(categorySlug, next.includes(categorySlug)).catch(() => { /* ignored */ });
       return next;
     });
   }, []);

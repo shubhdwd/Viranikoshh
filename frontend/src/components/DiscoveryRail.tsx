@@ -1,8 +1,8 @@
 
 import { Link } from 'react-router-dom';
-import { INTERESTS } from '../data/taxonomy';
 import { useInteractions } from '../contexts/InteractionsContext';
 import { usersApi } from '../api/usersApi';
+import { taxonomyApi } from '../api/taxonomyApi';
 import { useAsync } from '../hooks/useAsync';
 import { Card } from './ui/Card';
 import { Chip } from './ui/Chip';
@@ -10,6 +10,7 @@ import { Avatar } from './ui/Avatar';
 
 export function DiscoveryRail() {
   const { followedInterests, toggleFollowInterest, isFollowingCreator, toggleFollowCreator } = useInteractions();
+  const { data: categories } = useAsync(() => taxonomyApi.getInterestCategories(), []);
   const { data: voices } = useAsync(() => usersApi.suggested([]), []);
 
   return (
@@ -17,12 +18,12 @@ export function DiscoveryRail() {
       <Card className="p-4">
         <h2 className="font-display text-[15px] font-semibold text-charcoal">Cultural interests</h2>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {INTERESTS.slice(0, 8).map((interest) =>
+          {categories?.slice(0, 8).map((cat) =>
           <Chip
-            key={interest}
-            label={interest}
-            selected={followedInterests.includes(interest)}
-            onClick={() => toggleFollowInterest(interest)} />
+            key={cat.slug}
+            label={cat.label}
+            selected={followedInterests.includes(cat.slug)}
+            onClick={() => toggleFollowInterest(cat.slug)} />
 
           )}
         </div>
