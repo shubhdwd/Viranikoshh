@@ -24,7 +24,7 @@ interface PaginatedState<T> {
  * fresh closure each render — it's read through a ref so `loadMore` stays stable.
  */
 export function usePaginatedList<T>(
-  loader: (page: number) => Promise<PageResult<T>>,
+  loader: (page: number, signal?: AbortSignal) => Promise<PageResult<T>>,
   deps: unknown[] = []
 ): PaginatedState<T> {
   const [items, setItems] = useState<T[]>([]);
@@ -42,25 +42,25 @@ export function usePaginatedList<T>(
 
   // Initial load + reset whenever deps change.
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     busyRef.current = true;
     setLoading(true);
     setError(null);
-    loaderRef.current(1).
+    loaderRef.current(1, controller.signal).
     then((res) => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       setItems(res.records);
       setPagination(res.pagination);
     }).
     catch((e: unknown) => {
-      if (!cancelled) setError(e instanceof Error ? e.message : 'Something went wrong');
+      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Something went wrong');
     }).
     finally(() => {
       busyRef.current = false;
-      if (!cancelled) setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, nonce]);

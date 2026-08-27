@@ -62,12 +62,13 @@ export function useMediaRecorder(): RecorderValue {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const mimeType = recorder.mimeType || chunksRef.current[0]?.type || 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         setAudioUrl(URL.createObjectURL(blob));
         setState('stopped');
         cleanup();
       };
-      recorder.start();
+      recorder.start(1000);
 
       const ctx = new AudioContext();
       audioCtxRef.current = ctx;

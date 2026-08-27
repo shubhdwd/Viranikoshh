@@ -25,7 +25,27 @@ export const usersApi = {
   },
 
   suggested(excludeIds: string[]): Promise<CulturalUser[]> {
-    return request({ url: '/users/suggested', method: 'GET', params: { excludeIds: excludeIds.join(',') } });
+    return request<{ id: string; name: string; avatarUrl: string | null; bio: string | null; postCount: number }[]>({
+      url: '/users/suggested',
+      method: 'GET',
+      params: { excludeIds: excludeIds.join(',') },
+    }).then((users) =>
+      users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        handle: u.name.toLowerCase().replace(/\s+/g, ''),
+        avatarUrl: u.avatarUrl ?? '',
+        bio: u.bio ?? '',
+        region: '',
+        state: '',
+        languages: [],
+        interests: [],
+        followers: 0,
+        following: 0,
+        contributions: u.postCount,
+        isKnowledgeHolder: false,
+      }))
+    );
   },
 
   updateProfile(id: string, patch: Partial<CulturalUser>): Promise<CulturalUser> {

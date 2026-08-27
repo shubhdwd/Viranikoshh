@@ -83,15 +83,13 @@ export const FESTIVALS = [
 
 
 export const INTERESTS = [
+'Folk stories',
 'Folk songs',
 'Oral storytelling',
 'Tribal art',
 'Textile craft',
 'Ritual performance',
 'Village festivals',
-'Pottery & clay',
-'Regional cuisine lore',
-'Instrument making',
 'Local history'];
 
 /**

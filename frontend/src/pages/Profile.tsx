@@ -11,6 +11,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { Button, LinkButton } from '../components/ui/Button';
 import { Tabs } from '../components/ui/Tabs';
 import { Chip } from '../components/ui/Chip';
+import { INTEREST_NAME_TO_ID } from '../types/culture';
 import { GridSkeleton, Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { compactCount } from '../utils/format';
@@ -36,7 +37,7 @@ export function Profile() {
   } = useInteractions();
   const [tab, setTab] = useState<TabId>('posts');
   const profile = useAsync(() => usersApi.getById(id), [id]);
-  const all = useAsync(() => postsApi.getFeed({ followedCreators: [], followedInterests: [] }), []);
+  const all = useAsync(() => postsApi.getFeed({}), []);
   const isMe = me?.id === id;
   const posts = useMemo(() => (all.data ?? []).filter((r) => r.creatorId === id), [all.data, id]);
   const interviews = useMemo(() => posts.filter((r) => r.fromInterview), [posts]);
@@ -154,7 +155,7 @@ export function Profile() {
               {isMe ? 'These shape your feed. Tap to follow or unfollow.' : `Traditions ${user.name.split(' ')[0]} follows.`}
             </p>
             <div className="mt-4 flex flex-wrap gap-1.5">
-              {user.interests?.map((interest) => <Chip key={interest} label={interest} selected={isMe ? followedInterests.includes(interest) : true} onClick={isMe ? () => toggleFollowInterest(interest) : undefined} />)}
+              {user.interests?.map((interest) => <Chip key={interest} label={interest} selected={isMe ? followedInterests.includes(INTEREST_NAME_TO_ID[interest] ?? '') : true} onClick={isMe ? () => toggleFollowInterest(interest) : undefined} />)}
             </div>
           </div>}
       </div>

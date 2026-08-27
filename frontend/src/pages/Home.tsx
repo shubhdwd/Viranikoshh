@@ -17,11 +17,11 @@ import { CATEGORY_LABELS } from '../types/culture';
 
 export function Home() {
   const { user } = useAuth();
-  const { followedCreators, followedInterests, saved, liked } = useInteractions();
+  const { followedInterests } = useInteractions();
 
   const feed = usePaginatedList(
-    (page) => postsApi.getFeedPage({ followedCreators, followedInterests, savedIds: saved, likedIds: liked }, page),
-    [followedCreators.join(), followedInterests.join(), saved.join(), liked.join()]
+    (page) => postsApi.getFeedPage({ followedInterests }, page),
+    [followedInterests.join()]
   );
   const featured = useAsync(() => postsApi.getFeatured(), []);
 
@@ -100,8 +100,8 @@ export function Home() {
           {!feed.loading && !feed.error && feed.items.length === 0 &&
           <EmptyState
             icon={CompassIcon}
-            title="Your feed is quiet"
-            description="Follow a few creators or cultural interests to fill it."
+            title={followedInterests.length > 0 ? "No posts found for this category" : "Your feed is quiet"}
+            description={followedInterests.length > 0 ? "Try following other interests, or check back later for new content." : "Follow a few creators or cultural interests to fill it."}
             actionLabel="Explore cultural records"
             actionTo="/explore" />
 

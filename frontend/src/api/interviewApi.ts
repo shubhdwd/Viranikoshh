@@ -17,10 +17,10 @@ export const interviewApi = {
   uploadAnswerAudio(interviewId: string, questionId: string, audio: Blob): Promise<{audioUrl: string; questionId: string;}> {
     const form = new FormData();
     form.append('audio', audio, `${questionId}.webm`);
+    form.append('questionId', questionId);
     return request({
       url: `/interviews/${interviewId}/audio`,
       method: 'POST',
-      params: { questionId },
       data: form
     });
   },

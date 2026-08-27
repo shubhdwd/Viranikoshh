@@ -2,11 +2,36 @@ import axios, { type AxiosRequestConfig } from 'axios';
 
 const API_BASE_URL = import.meta.env['VITE_API_URL'] || 'http://localhost:5000';
 
+// Serialize array params without the `[]` bracket suffix (e.g. `categories=a&categories=b`
+// instead of `categories[]=a&categories[]=b`). The backend's default Express query
+// parser turns bracket keys into `{ "categories[]": ... }`, which silently dropped
+// array filters (category/region) and returned every post. Simple repeat-keys keep
+// the param name intact so the backend resolves them correctly.
+function paramsSerializer(params: Record<string, any>): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined && item !== null && item !== '') {
+          parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(item))}`);
+        }
+      }
+    } else if (typeof value === 'object') {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(JSON.stringify(value))}`);
+    } else {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+    }
+  }
+  return parts.join('&');
+}
+
 export const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
+  paramsSerializer,
 });
 
 // When sending FormData (file uploads), the instance-level Content-Type
