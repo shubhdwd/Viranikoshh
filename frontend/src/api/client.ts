@@ -1,6 +1,11 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = import.meta.env['VITE_API_URL'] || 'http://localhost:5000';
+const envUrl = (import.meta.env['VITE_API_URL'] as string | undefined)?.trim();
+const API_BASE_URL = !envUrl
+  ? '/api'
+  : envUrl.endsWith('/api')
+  ? envUrl
+  : `${envUrl.replace(/\/$/, '')}/api`;
 
 // Serialize array params without the `[]` bracket suffix (e.g. `categories=a&categories=b`
 // instead of `categories[]=a&categories[]=b`). The backend's default Express query
@@ -27,7 +32,7 @@ function paramsSerializer(params: Record<string, any>): string {
 }
 
 export const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: API_BASE_URL,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,

@@ -16,19 +16,41 @@ import { VERIFICATION_LABELS, type VerificationStatus } from '../types/verificat
 const FILTERS: VerificationStatus[] = ['pending', 'correction-suggested', 'flagged'];
 export function Verification() {
   const { isAuthenticated } = useAuth();
+  const [status, setStatus] = useState<VerificationStatus | null>(null);
   const {
     data,
     loading,
     reload
-  } = useAsync(() => isAuthenticated ? verificationApi.queue() : Promise.resolve(null), [isAuthenticated]);
-  const [status, setStatus] = useState<VerificationStatus | null>(null);
+  } = useAsync(
+    () => {
+      if (!isAuthenticated) return Promise.resolve(null);
+      if (status === 'flagged' || status === 'correction-suggested') {
+        return verificationApi.flagged();
+      }
+      return verificationApi.queue();
+    },
+    [isAuthenticated, status]
+  );
   const items = useMemo(() => {
     const all = data ?? [];
-    return status ? all.filter((r) => r.community.status === status) : all;
+    if (!status) return all;
+    if (status === 'flagged') {
+      return all.filter(
+        (r) => r.community.status === 'flagged' || r.community.history.some((h) => h.action === 'flag')
+      );
+    }
+    if (status === 'correction-suggested') {
+      return all.filter(
+        (r) =>
+          r.community.status === 'correction-suggested' ||
+          (r.community.corrections && r.community.corrections.length > 0)
+      );
+    }
+    return all.filter((r) => r.community.status === status);
   }, [data, status]);
 
   const handleAction = useCallback((_recordId: string) => {
-    // Re-fetch the queue so acted-upon records update their status
+    // Re-fetch the queue/flagged list so acted-upon records update their status
     reload();
   }, [reload]);
   return <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:py-8">

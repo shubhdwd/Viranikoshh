@@ -25,7 +25,8 @@ export function CommentSection({ recordId, compact, className }: CommentSectionP
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
 
-  const all = [...(data ?? []), ...added];
+  const serverIds = new Set((data ?? []).map((c) => c.id));
+  const all = [...(data ?? []), ...added.filter((c) => !serverIds.has(c.id))];
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

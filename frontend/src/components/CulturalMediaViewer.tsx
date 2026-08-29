@@ -1,5 +1,5 @@
 
-import { QuoteIcon } from 'lucide-react';
+import { MicOffIcon, QuoteIcon } from 'lucide-react';
 import type { MediaAsset } from '../types/culture';
 import { AudioPlayer } from './AudioPlayer';
 import { VideoPlayer } from './VideoPlayer';
@@ -25,10 +25,17 @@ export function CulturalMediaViewer({
     return <VideoPlayer posterUrl={media.posterUrl} src={media.sourceUrl} durationSec={media.durationSec} altText={media.altText} className={cn(frame, className)} />;
   }
   if (media.type === 'audio') {
+    const hasAudio = Boolean(media.sourceUrl);
     return <div className={cn('relative overflow-hidden bg-charcoal', frame, className)}>
         <CulturalImage src={media.posterUrl} alt={media.altText} seed={seed} className="h-full w-full object-cover opacity-55" />
         <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
           <AudioPlayer src={media.sourceUrl} durationSec={media.durationSec} seed={seed} tone="dark" label="Original recording" className="backdrop-blur-sm" />
+          {!hasAudio && (
+            <p className="mt-2 flex items-center gap-1.5 text-[11px] text-cream/60">
+              <MicOffIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              No audio file uploaded yet — contributor can add a recording.
+            </p>
+          )}
         </div>
       </div>;
   }

@@ -3,8 +3,8 @@ import type { CulturalComment, CulturalRecord } from '../types/culture';
 import { resolveMedia } from '../utils/media';
 
 export interface FeedParams {
-  followedCreators: string[];
-  followedInterests: string[];
+  followedCreators?: string[];
+  followedInterests?: string[];
   savedIds?: string[];
   likedIds?: string[];
 }
@@ -28,23 +28,34 @@ function transformPost(post: any): CulturalRecord {
   return {
     id: post.id,
     title: post.title,
-    description: post.description ?? '',
+    description: post.description || '',
     category,
     region: post.region?.name || '',
-    state: post.region?.state || post.region?.name || '',
+    state: post.region?.state || '',
+    country: post.region?.country || 'India',
     coordinates: [post.latitude ?? 0, post.longitude ?? 0] as [number, number],
     tradition: post.tradition ?? '',
     artForm: post.artForm,
     festival: post.festival,
     creatorId: post.userId ?? post.creatorId ?? '',
-    createdAt: post.createdAt ?? '',
-    tags: post.tags?.map((t: any) => t.name || t) ?? [],
+    tags: post.tags?.map((t: any) => (typeof t === 'string' ? t : (t.name ?? t.tag?.name ?? ''))).filter(Boolean) || [],
     likes: post._count?.likes ?? post.likes ?? 0,
     comments: post._count?.comments ?? post.comments ?? 0,
     saves: post._count?.saves ?? post.saves ?? 0,
+    metrics: {
+      likes: post._count?.likes ?? post.likes ?? 0,
+      saves: post._count?.saves ?? post.saves ?? 0,
+      comments: post._count?.comments ?? post.comments ?? 0,
+      shares: post.shares ?? 0,
+    },
+    location: {
+      lat: post.latitude || 20.5937,
+      lng: post.longitude || 78.9629,
+      placeName: post.region?.name || '',
+      state: post.region?.state || '',
+    },
     source: {
-      // The API's media rows disagree on casing and carry no duration, so the
-      // asset is rebuilt here rather than read off the wire field by field.
+      type: post.source?.type || 'recording',
       media: resolveMedia({
         media: post.media,
         title: post.title,
@@ -73,19 +84,19 @@ function transformPost(post: any): CulturalRecord {
 export { transformPost };
 
 export const postsApi = {
-  getFeed(params: FeedParams): Promise<CulturalRecord[]> {
+  getFeed(params?: FeedParams): Promise<CulturalRecord[]> {
     return request({ url: '/posts/feed', method: 'GET', params }).then((data) => data.posts.map(transformPost));
   },
 
   // Paginated feed — returns records plus the server's pagination metadata so
   // the caller can append further pages.
-  getFeedPage(params: FeedParams, page = 1): Promise<PaginatedRecords> {
+  getFeedPage(params?: FeedParams, page = 1): Promise<PaginatedRecords> {
     // Join arrays into comma-separated strings for backend query parsing
     const queryParams: Record<string, string> = { page: String(page) };
-    if (params.followedInterests.length > 0) {
+    if (params?.followedInterests && params.followedInterests.length > 0) {
       queryParams['followedInterests'] = params.followedInterests.join(',');
     }
-    if (params.followedCreators.length > 0) {
+    if (params?.followedCreators && params.followedCreators.length > 0) {
       queryParams['followedCreators'] = params.followedCreators.join(',');
     }
     return request({ url: '/posts/feed', method: 'GET', params: queryParams }).then((data) => ({
@@ -129,7 +140,23 @@ export const postsApi = {
   },
 
   addComment(id: string, body: string, _userId: string): Promise<CulturalComment> {
-    return request({ url: `/posts/${id}/comments`, method: 'POST', data: { body } });
+    return request({ url: `/posts/${id}/comments`, method: 'POST', data: { content: body } }).then((res: any) => {
+      // sendSuccess wraps in { success, message, data }; unwrap if needed
+      const c = res?.id ? res : (res?.data ?? res);
+      return {
+        id: c.id,
+        recordId: id,
+        userId: c.user?.id ?? c.userId ?? '',
+        body: c.content ?? body,
+        createdAt: c.createdAt ?? new Date().toISOString(),
+        likes: 0,
+        user: c.user ? {
+          id: c.user.id,
+          name: c.user.name,
+          avatarUrl: c.user.profile?.avatar || '',
+        } : undefined,
+      } as CulturalComment;
+    });
   },
 
   getByCreator(userId: string): Promise<CulturalRecord[]> {

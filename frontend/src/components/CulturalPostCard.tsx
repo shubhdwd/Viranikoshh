@@ -56,13 +56,34 @@ export function CulturalPostCard({ record, variant = 'feed', className }: Cultur
         )}>
         
         <Link to={`/post/${record.id}`} className="block">
-          <div className="relative aspect-[4/3] overflow-hidden bg-sand-lighter">
+          <div className="relative aspect-[4/3] overflow-hidden bg-charcoal">
             <CulturalImage
               src={record.source.media.posterUrl}
               alt={record.source.media.altText}
               seed={record.id}
               category={record.category}
-              className="h-full w-full object-cover transition-transform duration-200 ease-firm group-hover:scale-[1.02]" />
+              className={cn(
+                'h-full w-full object-cover transition-transform duration-200 ease-firm group-hover:scale-[1.02]',
+                record.source.media.type === 'audio' && 'opacity-50'
+              )} />
+
+            {/* Audio overlay — mini waveform */}
+            {record.source.media.type === 'audio' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-cream/90 shadow">
+                  <Volume2Icon className="h-4 w-4 text-charcoal" aria-hidden="true" />
+                </span>
+                <div className="flex h-5 items-end gap-[2px]">
+                  {Array.from({ length: 18 }, (_, i) => (
+                    <span
+                      key={i}
+                      className="w-[3px] rounded-full bg-cream/60"
+                      style={{ height: `${20 + Math.sin(i * 0.9) * 50 + Math.cos(i * 0.4) * 30}%` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             <span className="absolute left-2.5 top-2.5 rounded-md bg-charcoal/75 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-cream backdrop-blur-sm">
               {CATEGORY_LABELS[record.category]}
@@ -113,11 +134,11 @@ export function CulturalPostCard({ record, variant = 'feed', className }: Cultur
         <VerificationBadge status={record.community.status} count={record.community.verifiedBy} />
       </header>
 
-      {record.source.media.type === 'image' ?
+      {record.source.media.type === 'image' || record.source.media.type === 'text' ?
       <Link to={`/post/${record.id}`} className="block">
           <CulturalMediaViewer media={record.source.media} seed={record.id} excerpt={record.source.transcript} />
         </Link> :
-
+      /* Audio / video — player is interactive, wrap just the title link below */
       <CulturalMediaViewer media={record.source.media} seed={record.id} excerpt={record.source.transcript} />
       }
 

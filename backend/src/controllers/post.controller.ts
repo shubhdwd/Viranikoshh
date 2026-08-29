@@ -38,6 +38,28 @@ export const POST_SELECT = {
   category: { select: { id: true, name: true, description: true } },
   media: { orderBy: { createdAt: "asc" as const }, take: 3 },
   tags: { include: { tag: true } },
+  verifications: {
+    select: {
+      id: true,
+      status: true,
+      comment: true,
+      userId: true,
+      createdAt: true,
+      user: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" as const },
+  },
+  corrections: {
+    select: {
+      id: true,
+      field: true,
+      suggestion: true,
+      userId: true,
+      createdAt: true,
+      user: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" as const },
+  },
   _count: { select: { likes: true, comments: true, saves: true } },
 } satisfies Prisma.CulturalPostSelect;
 
@@ -47,12 +69,71 @@ type PostWithRelations = Prisma.CulturalPostGetPayload<{
 
 /**
  * Convert a Prisma post row (with the TagOnPost join shape) into the
- * public API shape — tags come back as a flat `{ id, name }` array.
+ * public API shape — tags come back as a flat `{ id, name }` array,
+ * and the community verification/flag layer is computed.
  */
 export function formatPost(post: PostWithRelations) {
+  const verifications = (post as any).verifications ?? [];
+  const corrections = (post as any).corrections ?? [];
+  const verifiedCount = verifications.filter((v: any) => v.status === "VERIFIED").length;
+  const isFlagged = verifications.some((v: any) => v.status === "FLAGGED");
+  const hasCorrections = corrections.length > 0;
+
+  let status: "pending" | "verified" | "correction-suggested" | "flagged" = "pending";
+  if (isFlagged) {
+    status = "flagged";
+  } else if (hasCorrections) {
+    status = "correction-suggested";
+  } else if (verifiedCount >= 3) {
+    status = "verified";
+  }
+
+  const history = [
+    ...verifications.map((v: any) => ({
+      id: v.id,
+      action: v.status === "FLAGGED" ? "flag" : v.status === "CONTEXT" ? "context" : "verify",
+      userId: v.userId,
+      userName: v.user?.name,
+      note: v.comment ?? undefined,
+      createdAt: v.createdAt instanceof Date ? v.createdAt.toISOString() : v.createdAt,
+    })),
+    ...corrections.map((c: any) => ({
+      id: c.id,
+      action: "correct",
+      userId: c.userId,
+      userName: c.user?.name,
+      field: c.field,
+      note: c.suggestion,
+      createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+    })),
+  ];
+
   return {
     ...post,
     tags: post.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
+    community: {
+      status,
+      verifiedBy: verifiedCount,
+      notes: verifications
+        .filter((v: any) => v.status === "CONTEXT" || (Boolean(v.comment) && v.status !== "FLAGGED"))
+        .map((v: any) => ({
+          id: v.id,
+          userId: v.userId,
+          body: v.comment ?? "",
+          createdAt: v.createdAt instanceof Date ? v.createdAt.toISOString() : v.createdAt,
+          user: v.user ? { id: v.user.id, name: v.user.name } : undefined,
+        })),
+      corrections: corrections.map((c: any) => ({
+        id: c.id,
+        userId: c.userId,
+        field: c.field,
+        suggestion: c.suggestion,
+        accepted: false,
+        createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+        user: c.user ? { id: c.user.id, name: c.user.name } : undefined,
+      })),
+      history,
+    },
   };
 }
 

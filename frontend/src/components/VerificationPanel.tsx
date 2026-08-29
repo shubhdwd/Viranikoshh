@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BadgeCheckIcon, FlagIcon, MessageSquarePlusIcon, PencilLineIcon, UsersIcon } from 'lucide-react';
 import type { CulturalRecord } from '../types/culture';
 import type { VerificationAction, VerificationEvent } from '../types/verification';
@@ -77,6 +77,25 @@ export function VerificationPanel({
   // You cannot suggest a correction to your own record; everything else stays.
   const availableActions = isOwner ? ACTIONS.filter((a) => a.id === 'context') : ACTIONS;
   const flags = history.filter((event) => event.action === 'flag');
+  const corrections = useMemo(() => {
+    const fromProps = record.community.corrections ?? [];
+    const fromHistory = history
+      .filter((e) => e.action === 'correct')
+      .map((e) => ({
+        id: e.id,
+        userId: e.userId,
+        field: (e as any).field ?? 'general',
+        suggestion: e.note ?? '',
+        accepted: false,
+        createdAt: e.createdAt,
+        user: e.user,
+      }));
+    const map = new Map<string, any>();
+    for (const c of fromProps) map.set(c.id, c);
+    for (const c of fromHistory) if (!map.has(c.id)) map.set(c.id, c);
+    return Array.from(map.values());
+  }, [record.community.corrections, history]);
+
   const submit = async () => {
     if (!open || !user) return;
     setSending(true);
@@ -101,7 +120,7 @@ export function VerificationPanel({
       <p className="mt-1.5 flex items-center gap-1.5 text-sm text-charcoal-muted">
         <UsersIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
         {verifiedBy} community {verifiedBy === 1 ? 'member has' : 'members have'} confirmed this record
-        {record.community.corrections.length > 0 && ` · ${record.community.corrections.length} correction${record.community.corrections.length > 1 ? 's' : ''}`}
+        {corrections.length > 0 && ` · ${corrections.length} correction${corrections.length > 1 ? 's' : ''}`}
       </p>
 
       <p className="mt-4 rounded-lg bg-cream px-3 py-2.5 text-[12px] leading-relaxed text-charcoal-muted">
@@ -144,12 +163,12 @@ export function VerificationPanel({
           </ul>
         </div>}
 
-      {record.community.corrections.length > 0 && <div className="mt-5">
+      {corrections.length > 0 && <div className="mt-5">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-charcoal-soft">
             {isOwner ? 'Suggestions you have received' : 'Corrections'}
           </h3>
           <ul className="mt-2 space-y-3">
-            {record.community.corrections.map((correction) => <li key={correction.id} className="rounded-lg border border-clay/25 bg-[#fbeee6] p-3">
+            {corrections.map((correction) => <li key={correction.id} className="rounded-lg border border-clay/25 bg-[#fbeee6] p-3">
                 <p className="text-[11px] font-medium text-clay">
                   {correction.field} · {correction.accepted ? 'Accepted' : 'Under review'}
                 </p>

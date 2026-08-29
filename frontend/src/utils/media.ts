@@ -108,10 +108,24 @@ export function resolveMedia(input: ResolveMediaInput): MediaAsset {
   // timestamp, which makes the API's ordering a coin toss.
   const primary = rows.find((row) => isTimeBased(row.type)) ?? rows[0];
 
+/** Categories that are inherently oral / musical — always show the audio player UI. */
+const AUDIO_CATEGORIES = new Set<CulturalCategory>([
+  'folk-song',
+  'folk-story',
+  'oral-tradition',
+]);
+
   // No media at all: a written record if there is a transcript, otherwise just
   // a record we have no still for. Either way it must not claim to be playable.
   if (!primary) {
-    const type: MediaType = input.transcript && input.transcript.trim().length > 0 ? 'text' : 'image';
+    // Oral / musical categories without any uploaded file still show the
+    // audio player UI so visitors understand what kind of record this is.
+    const isAudioCategory = input.category && AUDIO_CATEGORIES.has(input.category);
+    const type: MediaType = isAudioCategory
+      ? 'audio'
+      : input.transcript && input.transcript.trim().length > 0
+      ? 'text'
+      : 'image';
     return {
       type,
       posterUrl: fallbackImage(input.seed, input.category),
@@ -129,7 +143,15 @@ export function resolveMedia(input: ResolveMediaInput): MediaAsset {
   };
 
   // Only time-based media has something to play.
-  if (isTimeBased(primary.type)) asset.sourceUrl = primary.url;
+  if (isTimeBased(primary.type)) {
+    asset.sourceUrl = primary.url;
+  } else if (primary.type === 'image' && input.category && AUDIO_CATEGORIES.has(input.category)) {
+    // The only media row is an image (thumbnail) but this is an oral/musical
+    // record — treat it as audio so the player UI renders. The image becomes
+    // the poster. No sourceUrl means the player runs in demo (no-audio) mode.
+    asset.type = 'audio';
+    asset.posterUrl = primary.url;
+  }
   if (typeof input.durationSec === 'number' && Number.isFinite(input.durationSec) && input.durationSec > 0) {
     asset.durationSec = input.durationSec;
   }

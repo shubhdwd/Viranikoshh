@@ -35,16 +35,24 @@ const KIND: Record<NotificationKind, {
 };
 export function NotificationItem({
   notification
-
-
 }: {notification: CulturalNotification;}) {
-  const actor = notification.actor ?? getUser(notification.actorId);
+  const actor = notification.actor ?? (notification.actorId ? getUser(notification.actorId) : undefined) ?? {
+    id: notification.actorId ?? '',
+    name: 'Someone',
+    avatarUrl: '',
+  };
   const record = notification.recordId ? getRecord(notification.recordId) : undefined;
-  const {
-    Icon,
-    className
-  } = KIND[notification.kind];
-  const href = record ? `/post/${record.id}` : `/profile/${actor.id}`;
+  const kindConfig = KIND[notification.kind] ?? KIND['like'];
+  const Icon = kindConfig.Icon;
+  const className = kindConfig.className;
+  const href = notification.kind === 'follow'
+    ? (actor.id ? `/profile/${actor.id}` : '#')
+    : (notification.recordId ? `/post/${notification.recordId}` : (actor.id ? `/profile/${actor.id}` : '#'));
+
+  const message = notification.body && actor.name && notification.body.startsWith(actor.name)
+    ? notification.body.slice(actor.name.length).trim()
+    : notification.body;
+
   return <li>
       <Link to={href} className={cn('flex items-start gap-3 p-4 transition-colors duration-150 ease-firm hover:bg-cream', !notification.read && 'bg-terracotta-50/60')}>
         <span className="relative shrink-0">
@@ -56,7 +64,7 @@ export function NotificationItem({
 
         <div className="min-w-0 flex-1">
           <p className="text-[13px] leading-relaxed text-charcoal">
-            <strong className="font-medium">{actor.name}</strong> {notification.body}
+            <strong className="font-medium">{actor.name}</strong> {message}
           </p>
           <p className="mt-1 text-[11px] text-charcoal-soft">{timeAgo(notification.createdAt)}</p>
         </div>

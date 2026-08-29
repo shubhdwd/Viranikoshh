@@ -259,3 +259,78 @@ export async function updateMe(
     next(error);
   }
 }
+
+const USER_MINI_SELECT = {
+  id: true,
+  name: true,
+  profile: { select: { avatar: true, bio: true, location: true } },
+  _count: { select: { posts: { where: { published: true } } } },
+} as const;
+
+function shapeMini(u: any) {
+  return {
+    id: u.id,
+    name: u.name,
+    avatarUrl: u.profile?.avatar ?? null,
+    bio: u.profile?.bio ?? null,
+    postCount: u._count?.posts ?? 0,
+  };
+}
+
+/**
+ * GET /api/users/:id/followers
+ *
+ * Public. Returns the list of users who follow the given user.
+ */
+export async function getFollowers(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const id = String(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!user) { sendError(res, 404, "User not found."); return; }
+
+    const rows = await prisma.follow.findMany({
+      where: { followingId: id },
+      select: { follower: { select: USER_MINI_SELECT } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    sendSuccess(res, 200, "Followers fetched.", {
+      followers: rows.map((r) => shapeMini(r.follower)),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/users/:id/following
+ *
+ * Public. Returns the list of users that the given user follows.
+ */
+export async function getFollowing(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const id = String(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!user) { sendError(res, 404, "User not found."); return; }
+
+    const rows = await prisma.follow.findMany({
+      where: { followerId: id },
+      select: { following: { select: USER_MINI_SELECT } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    sendSuccess(res, 200, "Following fetched.", {
+      following: rows.map((r) => shapeMini(r.following)),
+    });
+  } catch (error) {
+    next(error);
+  }
+}

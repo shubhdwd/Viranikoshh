@@ -7,6 +7,8 @@ import {
   getMyFollowing,
   getMySaves,
   getSuggestedUsers,
+  getFollowers,
+  getFollowing,
 } from "../controllers/user.controller";
 import {
   followUser,
@@ -23,6 +25,8 @@ router.get("/me/saves", authMiddleware, getMySaves);
 
 // Public
 router.get("/:id", getPublicProfile);
+router.get("/:id/followers", getFollowers);
+router.get("/:id/following", getFollowing);
 
 // Protected
 router.patch("/me", authMiddleware, updateMe);
