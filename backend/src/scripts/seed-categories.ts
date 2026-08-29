@@ -179,7 +179,7 @@ async function main() {
     // Tags
     const tagData = p.tags
       .filter((t) => tagByName[t])
-      .map((t) => ({ postId: post.id, tagId: tagByName[t] }));
+      .map((t) => ({ postId: post.id, tagId: tagByName[t] as string }));
     if (tagData.length > 0) {
       await prisma.tagOnPost.createMany({ data: tagData, skipDuplicates: true });
     }

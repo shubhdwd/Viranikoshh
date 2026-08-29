@@ -29,7 +29,7 @@ async function main() {
   });
   console.log("\n=== Sample posts ===");
   for (const p of sample) {
-    console.log(`  "${p.title}" -> category: ${p.category?.name ?? "NONE"} (${p.categoryId})`);
+    console.log(`  "${p.title}" -> category: ${p.category?.name ?? "NONE"} (${p.category?.id ?? 'n/a'})`);
   }
 
   await prisma.$disconnect();
