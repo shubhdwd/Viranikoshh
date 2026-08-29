@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircle2Icon, Loader2Icon, SparklesIcon } from 'lucide-react';
@@ -64,6 +64,9 @@ export function VirasatInterview() {
   const [recorderKey, setRecorderKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [createdRecordId, setCreatedRecordId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<string | null>(null);
+  const [questionIds, setQuestionIds] = useState<string[]>([]);
   const topic = interviewTopics.find((t) => t.id === topicId);
 
   const createdRecord = useAsync(
@@ -85,7 +88,8 @@ export function VirasatInterview() {
       setInterviewId(interview.id);
       const selectedTopic = interviewTopics.find((t) => t.id === topicId);
       if (!selectedTopic) throw new Error('Topic not found');
-      await interviewApi.addQuestions(interview.id, selectedTopic.questions);
+      const createdQuestions = await interviewApi.addQuestions(interview.id, selectedTopic.questions);
+      setQuestionIds(createdQuestions.map((q) => q.id));
       setQuestions(selectedTopic.questions);
       setIndex(0);
       setAnswers([]);
@@ -115,9 +119,11 @@ export function VirasatInterview() {
 
   const uploadCurrent = async (audioUrl: string) => {
     if (!topicId || !interviewId) return;
+    const realQuestionId = questionIds[index];
+    if (!realQuestionId) return;
     try {
       const blob = await fetch(audioUrl).then((r) => r.blob());
-      await interviewApi.uploadAnswerAudio(interviewId, interviewApi.questionId(topicId, index), blob);
+      await interviewApi.uploadAnswerAudio(interviewId, realQuestionId, blob);
     } catch {
       /* the local recording stays available either way */
     }
@@ -136,15 +142,31 @@ export function VirasatInterview() {
     ai.start();
     if (interviewId) {
       try {
-        const result = await interviewApi.complete(interviewId);
-        if (result.recordId) {
-          setCreatedRecordId(result.recordId);
-        }
+        await interviewApi.complete(interviewId);
       } catch {
         /* complete may fail but the interview still happened */
       }
     }
   };
+
+  const handlePublish = useCallback(async (published: boolean) => {
+    if (!interviewId) return;
+    setPublishing(true);
+    setPublishStatus(null);
+    try {
+      const result = await interviewApi.publishInterview(interviewId, {
+        published,
+        title: topic?.title,
+        description: `Interview with ${speakerName} about ${topic?.title}`,
+      });
+      setCreatedRecordId(result.recordId);
+      setPublishStatus(published ? 'Published!' : 'Saved as draft.');
+    } catch (e) {
+      setPublishStatus(e instanceof Error ? e.message : 'Failed to save. Please try again.');
+    } finally {
+      setPublishing(false);
+    }
+  }, [interviewId, topic, speakerName]);
 
   const answeredCount = answers.filter((a) => !a.skipped).length + (current.audioUrl ? 1 : 0);
   const isLastQuestion = index + 1 >= questions.length;
@@ -356,8 +378,27 @@ export function VirasatInterview() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => navigate('/home')}>Back to the feed</Button>
+                {createdRecordId ? (
+                  <Button onClick={() => navigate(`/post/${createdRecordId}`)}>
+                    View the cultural record
+                    <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="secondary" onClick={() => handlePublish(false)} disabled={publishing}>
+                      Save as Draft
+                    </Button>
+                    <Button onClick={() => handlePublish(true)} disabled={publishing}>
+                      {publishing ? 'Publishing...' : 'Publish'}
+                      <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </>
+                )}
+                <Button variant="ghost" onClick={() => navigate('/home')}>Back to the feed</Button>
               </div>
+              {publishStatus && (
+                <p className="mt-2 text-center text-[13px] text-verified">{publishStatus}</p>
+              )}
             </section>}
         </motion.div>
       </AnimatePresence>

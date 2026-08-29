@@ -8,6 +8,7 @@ import {
   addQuestions,
   uploadAudioResponse,
   completeInterview,
+  publishInterview,
 } from "../controllers/interview.controller";
 
 const router = Router();
@@ -18,5 +19,6 @@ router.get("/:id", authMiddleware, getInterview);
 router.post("/:id/questions", authMiddleware, addQuestions);
 router.post("/:id/audio", authMiddleware, uploadSingle("audio"), uploadAudioResponse);
 router.post("/:id/complete", authMiddleware, completeInterview);
+router.post("/:id/publish", authMiddleware, publishInterview);
 
 export default router;

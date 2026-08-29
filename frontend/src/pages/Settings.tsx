@@ -28,6 +28,18 @@ const NOTIFICATION_PREFS = [{
   id: 'correction',
   label: 'Suggested corrections'
 }];
+
+const PREFS_KEY = 'viranikosh_settings';
+
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function Settings() {
   const {
     user,
@@ -38,13 +50,14 @@ export function Settings() {
     toggleFollowInterest
   } = useInteractions();
   const { data: categories } = useAsync(() => taxonomyApi.getInterestCategories(), []);
+  const savedPrefs = loadPrefs();
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [region, setRegion] = useState(user?.region ?? REGIONS[0]);
   const [languages, setLanguages] = useState<string[]>(user?.languages ?? []);
-  const [prefs, setPrefs] = useState<string[]>(['follow', 'comment', 'verification', 'correction']);
-  const [autoTranslate, setAutoTranslate] = useState(true);
-  const [showOriginalFirst, setShowOriginalFirst] = useState(true);
+  const [prefs, setPrefs] = useState<string[]>(savedPrefs?.prefs ?? ['follow', 'comment', 'verification', 'correction']);
+  const [autoTranslate, setAutoTranslate] = useState(savedPrefs?.autoTranslate ?? true);
+  const [showOriginalFirst, setShowOriginalFirst] = useState(savedPrefs?.showOriginalFirst ?? true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   if (!user) return null;
@@ -58,6 +71,7 @@ export function Settings() {
         languages
       });
       updateUser(updated);
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ prefs, autoTranslate, showOriginalFirst }));
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2200);
     } finally {

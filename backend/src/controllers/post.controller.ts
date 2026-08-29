@@ -61,6 +61,19 @@ export const POST_SELECT = {
     orderBy: { createdAt: "desc" as const },
   },
   _count: { select: { likes: true, comments: true, saves: true } },
+  processingJobs: {
+    select: { id: true, status: true, step: true, error: true },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
+  transcripts: {
+    select: { id: true, content: true, language: { select: { name: true } } },
+    take: 1,
+  },
+  translations: {
+    select: { id: true, content: true, language: { select: { name: true } } },
+    take: 1,
+  },
 } satisfies Prisma.CulturalPostSelect;
 
 type PostWithRelations = Prisma.CulturalPostGetPayload<{
@@ -108,9 +121,24 @@ export function formatPost(post: PostWithRelations) {
     })),
   ];
 
+  // Build AI enrichment from ProcessingJob + Transcript + Translation
+  const job = (post as any).processingJobs?.[0];
+  const transcript = (post as any).transcripts?.[0];
+  const translation = (post as any).translations?.[0];
+  const ai = {
+    status: job?.status ?? "QUEUED",
+    step: job?.step ?? undefined,
+    error: job?.error ?? undefined,
+    translation: translation?.content ?? "",
+    summary: "",  // summary is not stored separately — could be derived in the future
+    detectedLanguage: transcript?.language?.name ?? "",
+    tags: [] as string[],
+  };
+
   return {
     ...post,
     tags: post.tags.map((t) => ({ id: t.tag.id, name: t.tag.name })),
+    ai,
     community: {
       status,
       verifiedBy: verifiedCount,

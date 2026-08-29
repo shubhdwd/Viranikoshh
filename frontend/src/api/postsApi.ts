@@ -147,7 +147,7 @@ export const postsApi = {
   },
 
   getByCreator(userId: string): Promise<CulturalRecord[]> {
-    return request({ url: '/posts/feed', method: 'GET', params: { limit: 100 } }).then((data) => data.posts.filter((p: any) => p.userId === userId).map(transformPost));
+    return request({ url: '/posts/feed', method: 'GET', params: { followedCreators: userId, limit: 50 } }).then((data) => data.posts.map(transformPost));
   },
 
   createRelation(postId: string, targetPostId: string, relationType: string): Promise<void> {

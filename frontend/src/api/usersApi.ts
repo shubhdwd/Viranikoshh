@@ -48,7 +48,22 @@ export const usersApi = {
     );
   },
 
-  updateProfile(id: string, patch: Partial<CulturalUser>): Promise<CulturalUser> {
-    return request({ url: `/users/${id}`, method: 'PATCH', data: patch });
+  updateProfile(_id: string, patch: Partial<CulturalUser>): Promise<CulturalUser> {
+    return request<any>({ url: '/users/me', method: 'PATCH', data: patch }).then((data) => ({
+      id: data.id,
+      name: data.name ?? '',
+      handle: data.email?.split('@')[0] ?? data.name?.toLowerCase().replace(/\s+/g, '') ?? '',
+      avatarUrl: data.profile?.avatar ?? '',
+      bio: data.profile?.bio ?? '',
+      region: data.profile?.location ?? '',
+      state: data.profile?.location ?? '',
+      languages: data.profile?.languages ?? [],
+      interests: [],
+      followers: 0,
+      following: 0,
+      contributions: 0,
+      isKnowledgeHolder: false,
+      role: data.role,
+    }));
   }
 };

@@ -101,9 +101,21 @@ export async function register(
     });
 
     // 4b. Link cultural interests (lookup CulturalCategory by name)
+    // Frontend sends slugs (e.g. "folk-song") — convert to DB display names (e.g. "Folk Song")
     if (parsed.interests && parsed.interests.length > 0) {
+      const SLUG_TO_NAME: Record<string, string> = {
+        "folk-story": "Folk Story",
+        "folk-song": "Folk Song",
+        "oral-tradition": "Oral Tradition",
+        artwork: "Regional Artwork",
+        craft: "Craft",
+        festival: "Festival",
+        "local-history": "Local History",
+        "traditional-practice": "Traditional Practice",
+      };
+      const categoryNames = parsed.interests.map((s) => SLUG_TO_NAME[s] ?? s);
       const categories = await prisma.culturalCategory.findMany({
-        where: { name: { in: parsed.interests } },
+        where: { name: { in: categoryNames } },
         select: { id: true },
       });
       if (categories.length > 0) {
@@ -233,6 +245,16 @@ export async function getMe(
         createdAt: true,
         updatedAt: true,
         profile: true,
+        interests: {
+          select: { category: { select: { id: true, name: true } } },
+        },
+        _count: {
+          select: {
+            posts: { where: { published: true } },
+            followers: true,
+            following: true,
+          },
+        },
       },
     });
 

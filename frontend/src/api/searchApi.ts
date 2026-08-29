@@ -43,6 +43,6 @@ export const searchApi = {
   },
 
   suggestions(query: string): Promise<string[]> {
-    return request({ url: '/search/suggestions', method: 'GET', params: { query } });
+    return request({ url: '/search/suggestions', method: 'GET', params: { q: query } });
   }
 };

@@ -10,8 +10,9 @@ export const interviewApi = {
     return request({ url: `/interviews/${id}`, method: 'GET' });
   },
 
-  addQuestions(interviewId: string, questions: string[]): Promise<void> {
-    return request({ url: `/interviews/${interviewId}/questions`, method: 'POST', data: { questions } });
+  addQuestions(interviewId: string, questions: string[]): Promise<Array<{ id: string; question: string; order: number }>> {
+    return request<any>({ url: `/interviews/${interviewId}/questions`, method: 'POST', data: { questions } })
+      .then((data) => data?.questions ?? []);
   },
 
   uploadAnswerAudio(interviewId: string, questionId: string, audio: Blob): Promise<{audioUrl: string; questionId: string;}> {
@@ -25,11 +26,11 @@ export const interviewApi = {
     });
   },
 
-  complete(interviewId: string): Promise<{recordId: string; answersStored: number;}> {
+  complete(interviewId: string): Promise<InterviewSession> {
     return request({ url: `/interviews/${interviewId}/complete`, method: 'POST' });
   },
 
-  questionId(topicId: string, index: number): string {
-    return `${topicId}-q${index + 1}`;
-  }
+  publishInterview(interviewId: string, opts: { published: boolean; title?: string; description?: string; categoryId?: string; regionId?: string }): Promise<{ recordId: string }> {
+    return request({ url: `/interviews/${interviewId}/publish`, method: 'POST', data: opts });
+  },
 };

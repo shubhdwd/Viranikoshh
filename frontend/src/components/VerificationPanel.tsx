@@ -51,6 +51,7 @@ export function VerificationPanel({
   const [localEvents, setLocalEvents] = useState<VerificationEvent[]>([]);
   const [serverEvents, setServerEvents] = useState<VerificationEvent[]>([]);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Load the persisted verification history (verify / flag / context / correct)
   // so it survives refreshes — the feed payload doesn't carry it.
@@ -70,7 +71,17 @@ export function VerificationPanel({
     };
   }, [record.id, isAuthenticated]);
 
-  const history = [...record.community.history, ...serverEvents, ...localEvents].sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+  const history = (() => {
+    const merged = [...record.community.history, ...serverEvents, ...localEvents];
+    const seen = new Set<string>();
+    return merged
+      .filter((e) => {
+        if (seen.has(e.id)) return false;
+        seen.add(e.id);
+        return true;
+      })
+      .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+  })();
   const isOwner = user?.id === record.creatorId;
   // Number of people who have actually confirmed this record.
   const verifiedBy = Math.max(record.community.verifiedBy, history.filter((event) => event.action === 'verify').length);
@@ -99,6 +110,7 @@ export function VerificationPanel({
   const submit = async () => {
     if (!open || !user) return;
     setSending(true);
+    setSubmitError(null);
     try {
       const event = await verificationApi.submit(record.id, open, note, user.id);
       setLocalEvents((prev) => [...prev, event]);
@@ -106,8 +118,8 @@ export function VerificationPanel({
       setNote('');
       setOpen(null);
       onAction?.(record.id);
-    } catch {
-      /* submission failed — user can retry */
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Submission failed. Please try again.');
     } finally {
       setSending(false);
     }
@@ -131,7 +143,7 @@ export function VerificationPanel({
         {availableActions.map(({
         id,
         Icon
-      }) => <Button key={id} variant="secondary" size="sm" onClick={() => setOpen(id)} className="justify-start min-w-0 overflow-hidden">
+      }) => <Button key={id} variant="secondary" size="sm" onClick={() => { setOpen(id); setSubmitError(null); }} className="justify-start min-w-0 overflow-hidden">
             <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate text-xs sm:text-[13px]">{VERIFICATION_ACTION_LABELS[id]}</span>
           </Button>)}
@@ -149,6 +161,10 @@ export function VerificationPanel({
 
       {confirmation && <p role="status" className="mt-3 rounded-lg border border-verified/20 bg-verified-soft px-3 py-2.5 text-[13px] text-verified">
           {confirmation}
+        </p>}
+
+      {submitError && <p role="alert" className="mt-3 rounded-lg border border-flagged/20 bg-flagged-soft px-3 py-2.5 text-[13px] text-flagged">
+          {submitError}
         </p>}
 
       {record.community.notes.length > 0 && <div className="mt-5">
@@ -200,8 +216,8 @@ export function VerificationPanel({
           </ol>
         </div>}
 
-      <Modal open={open !== null} onClose={() => setOpen(null)} title={open ? VERIFICATION_ACTION_LABELS[open] : ''} description={open ? ACTIONS.find((a) => a.id === open)?.help : undefined} footer={<>
-            <Button variant="secondary" onClick={() => setOpen(null)}>
+      <Modal open={open !== null} onClose={() => { setOpen(null); setSubmitError(null); }} title={open ? VERIFICATION_ACTION_LABELS[open] : ''} description={open ? ACTIONS.find((a) => a.id === open)?.help : undefined} footer={<>
+            <Button variant="secondary" onClick={() => { setOpen(null); setSubmitError(null); }}>
               Cancel
             </Button>
             <Button onClick={submit} loading={sending} variant={open === 'flag' ? 'danger' : 'primary'} disabled={open !== 'verify' && note.trim().length === 0}>

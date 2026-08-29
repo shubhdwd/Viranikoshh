@@ -36,8 +36,9 @@ export function InteractionsProvider({
     if (!isAuthenticated) return;
     interactionsApi.getFollowedInterests()
       .then((interests) => {
-        // Backend returns category names (e.g. "folk-song") — store as-is for slug matching
-        setFollowedInterests(interests.map((i) => i.name));
+        // Backend returns DB display names (e.g. "Folk Song") — normalize to slugs
+        // so they match cat.slug (e.g. "folk-song") used in DiscoveryRail/Profile
+        setFollowedInterests(interests.map((i) => i.name.toLowerCase().replace(/\s+/g, '-')));
       })
       .catch(() => { /* ignored */ });
 
@@ -57,7 +58,12 @@ export function InteractionsProvider({
   const toggleLike = useCallback((id: string) => {
     setLiked((prev) => {
       const next = toggle(prev, id);
-      interactionsApi.like(id, next.includes(id)).catch(() => { /* ignored */ });
+      const shouldLike = next.includes(id);
+      interactionsApi.like(id, shouldLike).catch(() => {
+        setLiked((revert) => shouldLike
+          ? revert.filter((v) => v !== id)
+          : [...revert, id]);
+      });
       return next;
     });
   }, []);
@@ -65,7 +71,13 @@ export function InteractionsProvider({
   const toggleSave = useCallback((id: string) => {
     setSaved((prev) => {
       const next = toggle(prev, id);
-      interactionsApi.save(id, next.includes(id)).catch(() => { /* ignored */ });
+      const shouldSave = next.includes(id);
+      interactionsApi.save(id, shouldSave).catch(() => {
+        // Revert optimistic update on failure
+        setSaved((revert) => shouldSave
+          ? revert.filter((v) => v !== id)
+          : [...revert, id]);
+      });
       return next;
     });
   }, []);
@@ -73,7 +85,12 @@ export function InteractionsProvider({
   const toggleFollowCreator = useCallback((id: string) => {
     setFollowedCreators((prev) => {
       const next = toggle(prev, id);
-      interactionsApi.followUser(id, next.includes(id)).catch(() => { /* ignored */ });
+      const shouldFollow = next.includes(id);
+      interactionsApi.followUser(id, shouldFollow).catch(() => {
+        setFollowedCreators((revert) => shouldFollow
+          ? revert.filter((v) => v !== id)
+          : [...revert, id]);
+      });
       return next;
     });
   }, []);
@@ -82,7 +99,12 @@ export function InteractionsProvider({
     if (!categorySlug) return;
     setFollowedInterests((prev) => {
       const next = toggle(prev, categorySlug);
-      interactionsApi.followInterest(categorySlug, next.includes(categorySlug)).catch(() => { /* ignored */ });
+      const shouldFollow = next.includes(categorySlug);
+      interactionsApi.followInterest(categorySlug, shouldFollow).catch(() => {
+        setFollowedInterests((revert) => shouldFollow
+          ? revert.filter((v) => v !== categorySlug)
+          : [...revert, categorySlug]);
+      });
       return next;
     });
   }, []);

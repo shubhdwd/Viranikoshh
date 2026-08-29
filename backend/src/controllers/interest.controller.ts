@@ -3,10 +3,28 @@ import { prisma } from "../utils/prisma";
 import { sendSuccess, sendError } from "../utils/apiResponse";
 
 /**
+ * Convert a frontend category slug (e.g. "folk-song") to a DB display name
+ * (e.g. "Folk Song"). If the input is already a display name, returns it as-is.
+ */
+function slugToCategoryName(slug: string): string {
+  const SLUG_TO_NAME: Record<string, string> = {
+    "folk-story": "Folk Story",
+    "folk-song": "Folk Song",
+    "oral-tradition": "Oral Tradition",
+    artwork: "Regional Artwork",
+    craft: "Craft",
+    festival: "Festival",
+    "local-history": "Local History",
+    "traditional-practice": "Traditional Practice",
+  };
+  return SLUG_TO_NAME[slug] ?? slug;
+}
+
+/**
  * POST /api/interests/:categoryName/follow
  *
  * Auth required. Follows a cultural category as an interest.
- * Accepts a category slug (name) instead of DB ID.
+ * Accepts a category slug (e.g. "folk-song") or display name (e.g. "Folk Song").
  * Idempotent — 201 on first follow, 200 if already following.
  */
 export async function followInterest(
@@ -16,7 +34,8 @@ export async function followInterest(
 ): Promise<void> {
   try {
     const userId = req.user!.id;
-    const categoryName = String(req.params.categoryName);
+    const raw = String(req.params.categoryName);
+    const categoryName = slugToCategoryName(raw);
 
     const category = await prisma.culturalCategory.findFirst({
       where: { name: categoryName },
@@ -66,7 +85,8 @@ export async function unfollowInterest(
 ): Promise<void> {
   try {
     const userId = req.user!.id;
-    const categoryName = String(req.params.categoryName);
+    const raw = String(req.params.categoryName);
+    const categoryName = slugToCategoryName(raw);
 
     const category = await prisma.culturalCategory.findFirst({
       where: { name: categoryName },

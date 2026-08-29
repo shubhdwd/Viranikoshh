@@ -56,7 +56,7 @@ export const uploadApi = {
     } });
   },
 
-  uploadMedia(postId: string, file: Blob, fileName: string): Promise<{mediaUrl: string; postId: string;}> {
+  uploadMedia(postId: string, file: Blob, fileName: string): Promise<{ media: any; processingJob: any }> {
     const form = new FormData();
     form.append('file', file, fileName);
     // Do NOT manually set Content-Type — axios auto-detects FormData and

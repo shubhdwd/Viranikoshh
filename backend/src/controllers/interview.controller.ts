@@ -358,3 +358,79 @@ export async function completeInterview(
     next(error);
   }
 }
+
+/**
+ * POST /api/interviews/:id/publish
+ *
+ * Auth required (owner only). Creates a CulturalPost from a completed interview.
+ * Body: { published: boolean, title?: string, description?: string, categoryId?: string, regionId?: string }
+ */
+export async function publishInterview(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const id = String(req.params.id);
+    const userId = req.user!.id;
+    const { published, title, description, categoryId, regionId } = req.body;
+
+    const interview = await prisma.interview.findUnique({
+      where: { id },
+      select: INTERVIEW_SELECT,
+    });
+
+    if (!interview) {
+      sendError(res, 404, "Interview not found.");
+      return;
+    }
+
+    if (interview.userId !== userId) {
+      sendError(res, 403, "You can only publish your own interviews.");
+      return;
+    }
+
+    if (interview.status !== "COMPLETED") {
+      sendError(res, 400, "Interview must be completed before publishing.");
+      return;
+    }
+
+    const audioResponses = interview.questions.flatMap((q) =>
+      q.responses.filter((r) => r.audioUrl).map((r) => ({
+        question: q.question,
+        audioUrl: r.audioUrl!,
+        transcription: r.transcription,
+      }))
+    );
+
+    const post = await prisma.culturalPost.create({
+      data: {
+        title: title || interview.title,
+        description: description || `Interview: ${interview.title}`,
+        content: audioResponses
+          .map((r) => `Q: ${r.question}\nA: ${r.transcription || "[audio recording]"}`)
+          .join("\n\n"),
+        published: Boolean(published),
+        user: { connect: { id: userId } },
+        region: regionId ? { connect: { id: regionId } } : undefined,
+        category: categoryId ? { connect: { id: categoryId } } : undefined,
+        media: {
+          create: audioResponses.map((r, i) => ({
+            url: r.audioUrl,
+            type: "audio",
+            mimeType: "audio/webm",
+            size: 0,
+            filename: `interview-q${i + 1}.webm`,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+
+    sendSuccess(res, 201, published ? "Interview published as post." : "Interview saved as draft.", {
+      recordId: post.id,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

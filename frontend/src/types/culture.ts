@@ -112,16 +112,13 @@ export const CATEGORY_NAME_TO_ID: Record<string, CulturalCategory> = Object.entr
   return acc;
 }, {} as Record<string, CulturalCategory>);
 
-export const INTEREST_NAME_TO_ID: Record<string, string> = {
-  'Folk stories': 'folk-story',
-  'Folk songs': 'folk-song',
-  'Oral storytelling': 'oral-tradition',
-  'Tribal art': 'artwork',
-  'Textile craft': 'craft',
-  'Ritual performance': 'traditional-practice',
-  'Village festivals': 'festival',
-  'Local history': 'local-history',
-};
+export const INTEREST_NAME_TO_ID: Record<string, string> = Object.entries(CATEGORY_LABELS).reduce(
+  (acc, [id, name]) => {
+    acc[name] = id;
+    return acc;
+  },
+  {} as Record<string, string>,
+);
 
 export const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
   RELATED_TRADITION: 'Related Tradition',

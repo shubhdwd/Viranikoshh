@@ -14,7 +14,6 @@ import { Chip } from '../components/ui/Chip';
 import { Skeleton, GridSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { compactCount } from '../utils/format';
-import { INTEREST_NAME_TO_ID } from '../types/culture';
 import { request } from '../api/client';
 
 type TabId = 'posts' | 'interviews' | 'interests';
@@ -181,7 +180,7 @@ export function Profile() {
                   Knowledge holder
                 </span>
               )}
-              {user.role === 'moderator' && (
+              {user.role === 'ADMIN' && (
                 <span className="rounded-full bg-verified-soft px-2.5 py-1 text-[11px] font-medium text-verified">
                   Moderator
                 </span>
@@ -378,7 +377,7 @@ export function Profile() {
                   key={interest}
                   label={interest}
                   selected={
-                    isMe ? followedInterests.includes(INTEREST_NAME_TO_ID[interest] ?? '') : true
+                    isMe ? followedInterests.includes(interest.toLowerCase().replace(/\s+/g, '-')) : true
                   }
                   onClick={isMe ? () => toggleFollowInterest(interest) : undefined}
                 />

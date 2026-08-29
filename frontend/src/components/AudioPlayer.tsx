@@ -68,9 +68,16 @@ export function AudioPlayer({ src, durationSec, seed = 'vk', label, className, t
 
   const toggle = () => {
     if (src && audioRef.current) {
-      if (playing) audioRef.current.pause();else
-      void audioRef.current.play();
-      setPlaying(!playing);
+      if (playing) {
+        audioRef.current.pause();
+        setPlaying(false);
+      } else {
+        audioRef.current.play().then(() => {
+          setPlaying(true);
+        }).catch(() => {
+          setPlaying(false);
+        });
+      }
       return;
     }
     if (total !== null && position >= total) setPosition(0);
@@ -108,13 +115,15 @@ export function AudioPlayer({ src, durationSec, seed = 'vk', label, className, t
       <audio
         ref={audioRef}
         src={src}
+        preload="metadata"
         onLoadedMetadata={(e) => {
           const value = e.currentTarget.duration;
           if (Number.isFinite(value) && value > 0) setLoadedDuration(value);
         }}
         onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
         onEnded={() => setPlaying(false)}
-        className="hidden" />
+        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}
+      />
 
       }
 

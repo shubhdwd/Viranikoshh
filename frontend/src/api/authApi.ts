@@ -11,7 +11,7 @@ function toCulturalUser(raw: any): CulturalUser {
     region: raw.profile?.location ?? raw.profile?.region ?? '',
     state: raw.profile?.location ?? '',
     languages: raw.profile?.languages ?? [],
-    interests: raw.interests?.map((i: any) => i.name) ?? [],
+    interests: raw.interests?.map((i: any) => i.category?.name ?? i.name) ?? [],
     followers: raw._count?.followers ?? 0,
     following: raw._count?.following ?? 0,
     contributions: raw._count?.posts ?? 0,
@@ -36,7 +36,7 @@ export const authApi = {
   },
 
   getMe(): Promise<CulturalUser> {
-    return request<{ user: any }>({ url: '/auth/me', method: 'GET' })
+    return request<any>({ url: '/auth/me', method: 'GET' })
       .then((data) => toCulturalUser(data));
   }
 };

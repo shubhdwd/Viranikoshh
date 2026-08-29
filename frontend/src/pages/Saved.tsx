@@ -20,17 +20,21 @@ export function Saved() {
   const {
     data,
     loading
-  } = useAsync(() => postsApi.getAll(), []);
+  } = useAsync(() => {
+    if (saved.length === 0) return Promise.resolve([]);
+    return Promise.all(saved.map((id) => postsApi.getById(id).catch(() => null)))
+      .then((results) => results.filter(Boolean) as NonNullable<typeof results[number]>[]);
+  }, [saved.join(',')]);
   const [category, setCategory] = useState<CulturalCategory | null>(null);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const items = useMemo(() => {
-    const all = (data ?? []).filter((r) => saved.includes(r.id));
+    const all = data ?? [];
     return category ? all.filter((r) => r.category === category) : all;
-  }, [data, saved, category]);
+  }, [data, category]);
   const categories = useMemo(() => {
-    const set = new Set((data ?? []).filter((r) => saved.includes(r.id)).map((r) => r.category));
+    const set = new Set((data ?? []).map((r) => r.category));
     return Array.from(set);
-  }, [data, saved]);
+  }, [data]);
   return <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <SectionHeading level={1} title="Saved" description="Private to you." action={<div className="flex rounded-lg border border-sand-light bg-paper p-0.5">
             {(['grid', 'list'] as const).map((mode) => <button key={mode} type="button" onClick={() => setView(mode)} aria-label={`${mode} view`} aria-pressed={view === mode} className={cn('flex h-8 w-9 items-center justify-center rounded-md transition-colors duration-150 ease-firm', view === mode ? 'bg-sand-lighter text-charcoal' : 'text-charcoal-soft hover:text-charcoal')}>

@@ -12,7 +12,7 @@ export interface CulturalUser {
   following: number;
   contributions: number;
   isKnowledgeHolder?: boolean;
-  role?: 'member' | 'moderator';
+  role?: 'USER' | 'ADMIN';
 }
 
 export interface AuthCredentials {
