@@ -151,7 +151,7 @@ export function Settings() {
           <ul className="mt-4 divide-y divide-sand-lighter">
             <li>
               <div
-                onClick={() => setShowOriginalFirst((v) => !v)}
+                onClick={() => setShowOriginalFirst((v: boolean) => !v)}
                 className="flex cursor-pointer items-center justify-between gap-6 py-3 transition-colors hover:opacity-90 select-none"
               >
                 <span className="min-w-0 flex-1">
@@ -162,14 +162,14 @@ export function Settings() {
                 </span>
                 <Toggle
                   checked={showOriginalFirst}
-                  onChange={() => setShowOriginalFirst((v) => !v)}
+                  onChange={() => setShowOriginalFirst((v: boolean) => !v)}
                   label="Show original first"
                 />
               </div>
             </li>
             <li>
               <div
-                onClick={() => setAutoTranslate((v) => !v)}
+                onClick={() => setAutoTranslate((v: boolean) => !v)}
                 className="flex cursor-pointer items-center justify-between gap-6 py-3 transition-colors hover:opacity-90 select-none"
               >
                 <span className="min-w-0 flex-1">
@@ -180,7 +180,7 @@ export function Settings() {
                 </span>
                 <Toggle
                   checked={autoTranslate}
-                  onChange={() => setAutoTranslate((v) => !v)}
+                  onChange={() => setAutoTranslate((v: boolean) => !v)}
                   label="Expand translations"
                 />
               </div>

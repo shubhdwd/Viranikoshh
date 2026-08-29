@@ -156,7 +156,7 @@ export function VirasatInterview() {
     try {
       const result = await interviewApi.publishInterview(interviewId, {
         published,
-        title: topic?.title,
+        title: topic?.title ?? '',
         description: `Interview with ${speakerName} about ${topic?.title}`,
       });
       setCreatedRecordId(result.recordId);

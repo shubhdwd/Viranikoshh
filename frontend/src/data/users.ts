@@ -44,7 +44,7 @@ export const users: CulturalUser[] = [
   followers: 12740,
   following: 341,
   contributions: 118,
-  role: 'moderator'
+  role: 'ADMIN'
 },
 {
   id: 'u4',
