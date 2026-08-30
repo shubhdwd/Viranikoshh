@@ -207,10 +207,11 @@ export async function getVerificationQueue(
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 10));
 
-    // Get all published post IDs
+    // Get all published post IDs (newest first so fresh posts appear in the queue)
     const publishedPosts = await prisma.culturalPost.findMany({
       where: { published: true },
       select: { id: true },
+      orderBy: { createdAt: "desc" },
     });
 
     // Get verification counts grouped by postId. Only VERIFIED confirmations

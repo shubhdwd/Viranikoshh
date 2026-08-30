@@ -239,6 +239,33 @@ export async function createPost(
 }
 
 /**
+ * GET /api/posts/my/drafts
+ *
+ * Auth required. Returns the current user's unpublished (draft) posts.
+ */
+export async function getDrafts(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.id;
+
+    const posts = await prisma.culturalPost.findMany({
+      where: { userId, published: false },
+      select: POST_SELECT,
+      orderBy: { createdAt: "desc" },
+    });
+
+    sendSuccess(res, 200, "Drafts fetched successfully.", {
+      posts: posts.map(formatPost),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * GET /api/posts/feed
  *
  * Public. Paginated feed of published posts, newest first.

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BookmarkIcon, LogOutIcon, MapPinIcon, MicIcon, SettingsIcon, SproutIcon, XIcon } from 'lucide-react';
+import { BookmarkIcon, FileTextIcon, LogOutIcon, MapPinIcon, MicIcon, SettingsIcon, SproutIcon, XIcon } from 'lucide-react';
 import { postsApi } from '../api/postsApi';
 import { usersApi } from '../api/usersApi';
 import { useAsync } from '../hooks/useAsync';
@@ -16,7 +16,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { compactCount } from '../utils/format';
 import { request } from '../api/client';
 
-type TabId = 'posts' | 'interviews' | 'interests';
+type TabId = 'posts' | 'interviews' | 'drafts' | 'interests';
 type FollowModal = { type: 'followers' | 'following'; userId: string; title: string } | null;
 
 interface MiniUser {
@@ -137,6 +137,7 @@ export function Profile() {
   const profile = useAsync(() => usersApi.getById(id), [id]);
   const all = useAsync(() => postsApi.getFeed({}), []);
   const isMe = me?.id === id;
+  const drafts = useAsync(() => (isMe ? postsApi.getDrafts() : Promise.resolve([])), [isMe]);
   const posts = useMemo(
     () => (all.data ?? []).filter((r) => r.creatorId === id),
     [all.data, id]
@@ -158,6 +159,7 @@ export function Profile() {
   const tabs = [
     { id: 'posts', label: 'Posts', count: posts.length },
     { id: 'interviews', label: 'Interviews', count: interviews.length },
+    ...(isMe ? [{ id: 'drafts', label: 'Drafts', count: drafts.data?.length ?? 0 }] : []),
     { id: 'interests', label: 'Interests', count: user.interests?.length ?? 0 },
   ];
 
@@ -356,6 +358,25 @@ export function Profile() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {interviews.map((record) => (
+                <CulturalPostCard key={record.id} record={record} variant="grid" />
+              ))}
+            </div>
+          ))}
+
+        {tab === 'drafts' &&
+          (drafts.loading ? (
+            <GridSkeleton count={4} />
+          ) : (drafts.data ?? []).length === 0 ? (
+            <EmptyState
+              icon={FileTextIcon}
+              title="No drafts yet"
+              description="Interviews saved as drafts will appear here. Publish them when you are ready."
+              actionLabel="Start a Virasat Interview"
+              actionTo="/virasat-interview"
+            />
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {(drafts.data ?? []).map((record) => (
                 <CulturalPostCard key={record.id} record={record} variant="grid" />
               ))}
             </div>

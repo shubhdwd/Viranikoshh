@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertCircleIcon, ArrowLeftIcon, LanguagesIcon, MapPinIcon, ScrollTextIcon, SparklesIcon } from 'lucide-react';
 import { postsApi } from '../api/postsApi';
 import { useAsync } from '../hooks/useAsync';
@@ -45,6 +45,7 @@ export function PostDetail() {
   const {
     id = ''
   } = useParams();
+  const navigate = useNavigate();
   const {
     data: record,
     loading,
@@ -111,10 +112,10 @@ export function PostDetail() {
               {record.source.contributorNote}
             </p>}
 
-          <PostActions recordId={record.id} likes={record.likes} comments={record.comments} saves={record.saves} onToggleComments={() => document.getElementById('comments')?.scrollIntoView({
+          <PostActions recordId={record.id} creatorId={record.creatorId} likes={record.likes} comments={record.comments} saves={record.saves} onToggleComments={() => document.getElementById('comments')?.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
-        })} className="mt-4 rounded-card border border-sand-light bg-paper px-3.5 py-3 sm:px-4" />
+        })} onDelete={() => navigate('/home')} className="mt-4 rounded-card border border-sand-light bg-paper px-3.5 py-3 sm:px-4" />
         </div>
 
         <div className="min-w-0 space-y-5">

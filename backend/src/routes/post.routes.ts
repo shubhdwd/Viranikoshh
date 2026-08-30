@@ -7,6 +7,7 @@ import { strictLimiter, generalLimiter } from "../middleware/rateLimit.middlewar
 import {
   createPost,
   getFeed,
+  getDrafts,
   getPostById,
   updatePost,
   deletePost,
@@ -21,6 +22,9 @@ router.post("/", authMiddleware, strictLimiter, createPost);
 router.patch("/:id", authMiddleware, updatePost);
 router.delete("/:id", authMiddleware, deletePost);
 router.post("/:id/relations", authMiddleware, strictLimiter, createRelation);
+
+// Drafts — auth required, must be before /:id
+router.get("/my/drafts", authMiddleware, getDrafts);
 
 // Public routes (optional auth lets draft-owners see their own drafts)
 router.get("/feed", generalLimiter, getFeed);

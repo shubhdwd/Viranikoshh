@@ -379,10 +379,17 @@ export function VirasatInterview() {
 
               <div className="flex flex-wrap gap-2">
                 {createdRecordId ? (
-                  <Button onClick={() => navigate(`/post/${createdRecordId}`)}>
-                    View the cultural record
-                    <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
-                  </Button>
+                  <>
+                    <Button onClick={() => navigate(`/post/${createdRecordId}`)}>
+                      View the cultural record
+                      <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                    {publishStatus === 'Saved as draft.' && (
+                      <Button variant="secondary" onClick={() => navigate('/profile/me', { state: { tab: 'drafts' } })}>
+                        View in Drafts
+                      </Button>
+                    )}
+                  </>
                 ) : (
                   <>
                     <Button variant="secondary" onClick={() => handlePublish(false)} disabled={publishing}>

@@ -1,17 +1,21 @@
 import { useState } from 'react';
-import { BookmarkIcon, CheckIcon, HeartIcon, LinkIcon, MessageCircleIcon, Share2Icon } from 'lucide-react';
+import { BookmarkIcon, CheckIcon, HeartIcon, LinkIcon, MessageCircleIcon, Share2Icon, Trash2Icon } from 'lucide-react';
 import { useInteractions } from '../contexts/InteractionsContext';
+import { useAuth } from '../contexts/AuthContext';
+import { postsApi } from '../api/postsApi';
 import { Popover } from './ui/Popover';
 import { compactCount } from '../utils/format';
 import { cn } from '../utils/cn';
 
 interface PostActionsProps {
   recordId: string;
+  creatorId?: string;
   likes: number;
   comments: number;
   saves: number;
   commentsOpen?: boolean;
   onToggleComments?: () => void;
+  onDelete?: () => void;
   className?: string;
 }
 
@@ -23,16 +27,33 @@ function recordUrl(recordId: string): string {
 
 export function PostActions({
   recordId,
+  creatorId,
   likes,
   comments,
   saves,
   commentsOpen,
   onToggleComments,
+  onDelete,
   className
 }: PostActionsProps) {
   const { isLiked, isSaved, toggleLike, toggleSave } = useInteractions();
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isOwner = user?.id && creatorId && user.id === creatorId;
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await postsApi.deletePost(recordId);
+      onDelete?.();
+    } catch {
+      setDeleting(false);
+    }
+  };
 
   const liked = isLiked(recordId);
   const saved = isSaved(recordId);
@@ -92,6 +113,18 @@ export function PostActions({
         <BookmarkIcon className={cn('h-[18px] w-[18px]', saved && 'fill-terracotta')} aria-hidden="true" />
         {compactCount(saves + (saved ? 1 : 0))}
       </button>
+
+      {isOwner && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          aria-label="Delete this record"
+          className={cn(ITEM, 'shrink-0', 'text-charcoal-muted hover:text-flagged')}>
+          <Trash2Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+          <span className="hidden sm:inline">{deleting ? 'Deleting...' : 'Delete'}</span>
+        </button>
+      )}
 
       <div className="ml-auto shrink-0">
         {canNativeShare ?

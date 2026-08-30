@@ -146,6 +146,14 @@ export const postsApi = {
     });
   },
 
+  getDrafts(): Promise<CulturalRecord[]> {
+    return request({ url: '/posts/my/drafts', method: 'GET' }).then((data) => data.posts.map(transformPost));
+  },
+
+  deletePost(id: string): Promise<void> {
+    return request({ url: `/posts/${id}`, method: 'DELETE' });
+  },
+
   getByCreator(userId: string): Promise<CulturalRecord[]> {
     return request({ url: '/posts/feed', method: 'GET', params: { followedCreators: userId, limit: 50 } }).then((data) => data.posts.map(transformPost));
   },

@@ -26,14 +26,14 @@ function toArray(val: unknown): string[] {
  * Frontend category slugs (CulturalCategory keys) → DB category names.
  */
 const SLUG_TO_NAME: Record<string, string> = {
-  "folk-story": "Folk Story",
-  "folk-song": "Folk Song",
-  "oral-tradition": "Oral Tradition",
-  artwork: "Regional Artwork",
-  craft: "Craft",
-  festival: "Festival",
-  "local-history": "Local History",
-  "traditional-practice": "Traditional Practice",
+  "folk-story": "folk-story",
+  "folk-song": "folk-song",
+  "oral-tradition": "oral-tradition",
+  artwork: "artwork",
+  craft: "craft",
+  festival: "festival",
+  "local-history": "local-history",
+  "traditional-practice": "traditional-practice",
 };
 
 /**
