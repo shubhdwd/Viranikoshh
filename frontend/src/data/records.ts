@@ -814,11 +814,12 @@ export const records: CulturalRecord[] = [
     recordedAt: '2026-06-02T06:40:00Z',
     recordedBy: 'Aarav Sen'
   },
-  ai: {
-    status: 'FAILED',
-    tags: [],
-    failureReason: 'Audio could not be separated from background wind noise during transcription.'
-  },
+  ai: enrich({
+    detectedLanguage: 'Halbi',
+    translation: 'One sack, two sacks, three sacks — the counting goes on with the song.',
+    summary: 'A Bastar harvest counting song sung at the threshing floor, used to pace the measurement of grain. The rhythmic counting structure makes it a practical work song.',
+    tags: ['Bastar', 'Halbi', 'work song', 'harvest', 'counting song', 'Chhattisgarh']
+  }),
   community: community('pending', 0),
   relationships: [{ type: 'RELATED_SONG', recordId: 'r15' }]
 }];
