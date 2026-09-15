@@ -100,27 +100,21 @@ export async function register(
       },
     });
 
-    // 4b. Link cultural interests (lookup CulturalCategory by name)
-    // Frontend sends slugs (e.g. "folk-song") — convert to DB display names (e.g. "Folk Song")
+    // 4b. Link cultural interests by matching normalized category names.
+    // Frontend sends slugs (e.g. "folk-song") which may or may not match the
+    // exact DB name — normalization handles both slug-style and display-style names.
     if (parsed.interests && parsed.interests.length > 0) {
-      const SLUG_TO_NAME: Record<string, string> = {
-        "folk-story": "Folk Story",
-        "folk-song": "Folk Song",
-        "oral-tradition": "Oral Tradition",
-        artwork: "Regional Artwork",
-        craft: "Craft",
-        festival: "Festival",
-        "local-history": "Local History",
-        "traditional-practice": "Traditional Practice",
-      };
-      const categoryNames = parsed.interests.map((s) => SLUG_TO_NAME[s] ?? s);
-      const categories = await prisma.culturalCategory.findMany({
-        where: { name: { in: categoryNames } },
-        select: { id: true },
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
+      const normalizedSlugs = parsed.interests.map(normalize);
+      const allCategories = await prisma.culturalCategory.findMany({
+        select: { id: true, name: true },
       });
-      if (categories.length > 0) {
+      const matchingCategories = allCategories.filter((c) =>
+        normalizedSlugs.includes(normalize(c.name))
+      );
+      if (matchingCategories.length > 0) {
         await prisma.interest.createMany({
-          data: categories.map((c) => ({ userId: user.id, categoryId: c.id })),
+          data: matchingCategories.map((c) => ({ userId: user.id, categoryId: c.id })),
           skipDuplicates: true,
         });
       }

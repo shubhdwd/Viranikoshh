@@ -20,11 +20,28 @@ export const updateUserSchema = z.object({
     .trim()
     .nullable()
     .optional(),
+  avatarUrl: z
+    .string()
+    .url("Avatar must be a valid URL")
+    .max(500, "Avatar URL must be at most 500 characters")
+    .trim()
+    .nullable()
+    .optional(),
   location: z
     .string()
     .max(200, "Location must be at most 200 characters")
     .trim()
     .nullable()
+    .optional(),
+  region: z
+    .string()
+    .max(200, "Region must be at most 200 characters")
+    .trim()
+    .nullable()
+    .optional(),
+  languages: z
+    .array(z.string().trim().min(1).max(200, "Language names must be at most 200 characters"))
+    .max(20, "At most 20 languages can be listed")
     .optional(),
 });
 

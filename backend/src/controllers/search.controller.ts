@@ -12,43 +12,87 @@ function escapeLike(value: string): string {
 }
 
 /**
- * Normalise a query-string value into a clean string array.
- * Axios may send: ?categories=foo  → string, or ?categories[]=foo → string[],
- * or ?categories=foo&categories=bar → string[].
+ * Read a single query param value into a clean string array.
+ * Handles:
+ *   string                     → [value]
+ *   array (repeat keys)        → [a, b]     (frontend paramsSerializer)
+ *   object (bracket-style key) → [a, b]     (Express "simple" parser)
  */
-function toArray(val: unknown): string[] {
-  if (!val) return [];
-  if (Array.isArray(val)) return val.map(String).filter(Boolean);
-  return [String(val)].filter(Boolean);
+function pickValue(req: Request, key: string): string[] {
+  const raw = (req.query as Record<string, unknown>)[key];
+  if (raw === undefined || raw === null) return [];
+  if (typeof raw === "string") return raw.trim() ? [raw.trim()] : [];
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === "object") {
+    return Object.values(raw as Record<string, unknown>)
+      .flatMap((v) => (Array.isArray(v) ? v : [v]))
+      .filter((v) => typeof v === "string" && v.trim().length > 0)
+      .map((v) => String(v).trim());
+  }
+  return String(raw).trim() ? [String(raw).trim()] : [];
 }
 
 /**
- * Frontend category slugs (CulturalCategory keys) → DB category names.
+ * Read a repeatable query param, supporting BOTH formats the frontend /
+ * Express may produce:
+ *   ?key=a&key=b      → req.query.key = ["a", "b"]   (paramsSerializer)
+ *   ?key[]=a&key[]=b  → req.query["key[]"] = { "": ["a","b"] } (legacy brackets)
+ * Returns a clean string array (or []).
  */
-const SLUG_TO_NAME: Record<string, string> = {
-  "folk-story": "folk-story",
-  "folk-song": "folk-song",
-  "oral-tradition": "oral-tradition",
-  artwork: "artwork",
-  craft: "craft",
-  festival: "festival",
-  "local-history": "local-history",
-  "traditional-practice": "traditional-practice",
-};
+function pickArray(req: Request, key: string): string[] {
+  return [...pickValue(req, key), ...pickValue(req, `${key}[]`)];
+}
+
+/**
+ * Split a facet label into lowercase search tokens.
+ * "Warli painting" → ["warli", "painting"].
+ */
+function tokens(value: string): string[] {
+  return value.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [];
+}
+
+/**
+ * Build OR-clauses that match posts whose tags contain any of the given
+ * facet tokens. One clause per unique token; caller ORs them together.
+ */
+function tagClauses(values: string[]): Array<{
+  tags: { some: { tag: { name: { contains: string; mode: "insensitive" } } } };
+}> {
+  const seen = new Set<string>();
+  for (const value of values) {
+    for (const token of tokens(value)) seen.add(token);
+  }
+  return Array.from(seen).map((token) => ({
+    tags: {
+      some: {
+        tag: { name: { contains: token, mode: "insensitive" } },
+      },
+    },
+  }));
+}
 
 /**
  * GET /api/search
  *
  * Public. Full-text search across published posts.
  * Query params:
- *   `q`           — search term (matches title, description, content)
- *   `tag` / `tags`— filter by tag name(s)
+ *   `q`              — search term (matches title, description, content)
+ *   `tag` / `tags`   — filter by tag name(s)
  *   `region` / `regions` — filter by region name(s) or ID(s)
- *   `category` / `categories` — filter by category slug(s) or ID(s)
- *   `languages`   — filter by source language(s)
- *   `verification`— filter by community verification status
- *   `page`        — page number (default 1)
- *   `limit`       — results per page (default 10, max 50)
+ *   `category` / `categories` — filter by category slug(s), name(s), or ID(s)
+ *   `languages`      — filter by source language(s) (tag or transcript match)
+ *   `traditions`     — filter by tradition label(s) (tag match)
+ *   `artForms`       — filter by art-form label(s) (tag match)
+ *   `festivals`      — filter by festival name(s) (tag match)
+ *   `mediaTypes`     — filter by media type(s) (image/video/audio/text)
+ *   `verification`   — filter by community status
+ *                      (verified | flagged | correction-suggested | pending)
+ *   `page`           — page number (default 1)
+ *   `limit`          — results per page (default 10, max 50)
+ *
+ * Facet semantics: values within one facet are OR'd; facets are AND'd
+ * together (including the free-text `q`). Categories and regions are
+ * relational filters applied at the top level of the where clause.
  */
 export async function searchPosts(
   req: Request,
@@ -64,41 +108,124 @@ export async function searchPosts(
     );
 
     // Accept both singular and plural param names (frontend sends plural)
-    const categorySlugs = [
-      ...toArray(req.query.category),
-      ...toArray(req.query.categories),
+    const categoryValues = [
+      ...pickArray(req, "category"),
+      ...pickArray(req, "categories"),
     ];
     const regionValues = [
-      ...toArray(req.query.region),
-      ...toArray(req.query.regions),
+      ...pickArray(req, "region"),
+      ...pickArray(req, "regions"),
     ];
     const tagValues = [
-      ...toArray(req.query.tag),
-      ...toArray(req.query.tags),
+      ...pickArray(req, "tag"),
+      ...pickArray(req, "tags"),
     ];
-    // language/verification filters reserved for future use
+    const languageValues = [...pickArray(req, "languages"), ...pickArray(req, "language")];
+    const traditionValues = [...pickArray(req, "traditions"), ...pickArray(req, "tradition")];
+    const artFormValues = [...pickArray(req, "artForms"), ...pickArray(req, "artForm")];
+    const festivalValues = [...pickArray(req, "festivals"), ...pickArray(req, "festival")];
+    const mediaTypeValues = [...pickArray(req, "mediaTypes"), ...pickArray(req, "mediaType")];
+    const verificationValues = [...pickArray(req, "verification"), ...pickArray(req, "verifications")];
 
     const where: any = { published: true };
+    const and: any[] = [];
 
     // Text search across title, description, content
     if (q) {
       const escaped = escapeLike(q);
-      where.OR = [
-        { title: { contains: escaped, mode: "insensitive" } },
-        { description: { contains: escaped, mode: "insensitive" } },
-        { content: { contains: escaped, mode: "insensitive" } },
-      ];
+      and.push({
+        OR: [
+          { title: { contains: escaped, mode: "insensitive" } },
+          { description: { contains: escaped, mode: "insensitive" } },
+          { content: { contains: escaped, mode: "insensitive" } },
+        ],
+      });
     }
 
     // Filter by tag(s) — case-insensitive partial match
     if (tagValues.length > 0) {
-      where.tags = {
-        some: {
-          tag: {
-            name: { in: tagValues.map((t) => t), mode: "insensitive" },
+      and.push({
+        OR: tagClauses(tagValues),
+      });
+    }
+
+    // Tag-based quick-browse facets — OR within the facet, AND across facets
+    const tagFacets: Array<[string[], string]> = [
+      [traditionValues, "tradition"],
+      [artFormValues, "art form"],
+      [festivalValues, "festival"],
+    ];
+    for (const [values, label] of tagFacets) {
+      if (values.length > 0) {
+        const clauses = tagClauses(values);
+        if (clauses.length > 0) {
+          and.push({ OR: clauses });
+        } else {
+          console.warn(`[search] '${label}' filter had no searchable tokens; ignored.`);
+        }
+      }
+    }
+
+    // Languages — match by tag token OR transcript source language
+    if (languageValues.length > 0) {
+      and.push({
+        OR: [
+          ...tagClauses(languageValues),
+          {
+            transcripts: {
+              some: {
+                language: {
+                  name: { in: languageValues, mode: "insensitive" },
+                },
+              },
+            },
           },
-        },
-      };
+        ],
+      });
+    }
+
+    // Media types — match against media.type case-insensitively
+    if (mediaTypeValues.length > 0) {
+      and.push({
+        OR: mediaTypeValues.map((m) => ({
+          media: { some: { type: { equals: m, mode: "insensitive" } } },
+        })),
+      });
+    }
+
+    // Verification status — derived from community rows
+    if (verificationValues.length > 0) {
+      const statusClauses: any[] = [];
+      for (const value of verificationValues) {
+        const v = value.toLowerCase();
+        if (v === "verified") {
+          statusClauses.push({
+            verifications: {
+              some: { status: { equals: "VERIFIED", mode: "insensitive" } },
+            },
+          });
+        } else if (v === "flagged") {
+          statusClauses.push({
+            verifications: {
+              some: { status: { equals: "FLAGGED", mode: "insensitive" } },
+            },
+          });
+        } else if (v === "correction-suggested" || v === "correction") {
+          statusClauses.push({ corrections: { some: {} } });
+        } else if (v === "pending") {
+          // No verification or correction of any kind yet
+          statusClauses.push({
+            NOT: [{ verifications: { some: {} } }, { corrections: { some: {} } }],
+          });
+        }
+      }
+      if (statusClauses.length > 0) {
+        and.push({ OR: statusClauses });
+      }
+    }
+
+    if (and.length > 0) {
+      where.AND = and;
     }
 
     // Filter by region(s) — match by ID or by name (case-insensitive)
@@ -111,32 +238,25 @@ export async function searchPosts(
       };
     }
 
-    // Filter by category slug(s) — resolve to DB category IDs
-    if (categorySlugs.length > 0) {
-      // Resolve slugs to display names, then look up in DB
-      const categoryNames = categorySlugs
-        .map((s) => SLUG_TO_NAME[s] ?? s) // slug → name, or pass through if already a name/ID
-        .filter(Boolean);
-
-      // Look up categories by name (case-insensitive) OR by ID
-      const matchingCategories = await prisma.culturalCategory.findMany({
-        where: {
-          OR: [
-            { name: { in: categoryNames, mode: "insensitive" } },
-            { id: { in: categorySlugs } },
-          ],
-        },
-        select: { id: true },
+    // Filter by category — match by slug, display name, or ID.
+    // Both sides are normalized to "lowercase-hyphenated" so "Folk Song"
+    // and "folk-song" resolve to the same categories (same approach as getFeed).
+    if (categoryValues.length > 0) {
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
+      const normalizedFilters = [...new Set(categoryValues.map(normalize))];
+      const allCategories = await prisma.culturalCategory.findMany({
+        select: { id: true, name: true },
       });
-
-      if (matchingCategories.length > 0) {
-        where.categoryId = {
-          in: matchingCategories.map((c) => c.id),
-        };
-      } else {
-        // No matching categories found — return empty result
-        where.categoryId = "__NONE__";
-      }
+      const matchingIds = allCategories
+        .filter(
+          (c) =>
+            categoryValues.includes(c.id) ||
+            normalizedFilters.includes(normalize(c.name))
+        )
+        .map((c) => c.id);
+      // `in: []` returns zero rows — a clean "no match" that avoids the
+      // old `categoryId = "__NONE__"` hack.
+      where.categoryId = { in: matchingIds };
     }
 
     const [posts, total] = await Promise.all([

@@ -17,12 +17,12 @@ import { ART_FORMS, FESTIVALS, LANGUAGES, REGIONS } from '../data/taxonomy';
 
 type Facet = 'category' | 'artForm' | 'festival' | 'region' | 'language';
 
-const FACETS: {id: Facet;label: string;key: keyof SearchFilterState;}[] = [
-{ id: 'category', label: 'Category', key: 'categories' },
-{ id: 'artForm', label: 'Art form', key: 'artForms' },
-{ id: 'festival', label: 'Festival', key: 'festivals' },
-{ id: 'region', label: 'Region', key: 'regions' },
-{ id: 'language', label: 'Language', key: 'languages' }];
+const FACETS: {id: Facet;label: string;plural: string;key: keyof SearchFilterState;}[] = [
+{ id: 'category', label: 'Category', plural: 'All categories', key: 'categories' },
+{ id: 'artForm', label: 'Art form', plural: 'All art forms', key: 'artForms' },
+{ id: 'festival', label: 'Festival', plural: 'All festivals', key: 'festivals' },
+{ id: 'region', label: 'Region', plural: 'All regions', key: 'regions' },
+{ id: 'language', label: 'Language', plural: 'All languages', key: 'languages' }];
 
 
 const CATEGORY_VALUES = Object.keys(CATEGORY_LABELS) as CulturalCategory[];
@@ -176,7 +176,7 @@ export function Explore() {
 
       <div className="vk-scroll-x mt-4 flex gap-1.5 overflow-x-auto pb-1">
         <Chip
-          label={`All ${active.label.toLowerCase()}s`}
+          label={active.plural}
           selected={selectedForFacet.length === 0}
           onClick={() => setFilters((f) => ({ ...f, [active.key]: [] }) as SearchFilterState)} />
         

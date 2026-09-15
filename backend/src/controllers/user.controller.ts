@@ -212,6 +212,17 @@ export async function updateMe(
     const parsed: UpdateUserInput = updateUserSchema.parse(req.body);
     const userId = req.user!.id;
 
+    const avatar = parsed.avatarUrl ?? parsed.avatar;
+    const location = parsed.region !== undefined ? (parsed.location ?? parsed.region) : parsed.location;
+
+    const profileData = {
+      bio: parsed.bio,
+      avatar,
+      location,
+      region: parsed.region,
+      languages: parsed.languages,
+    };
+
     const updated = await prisma.$transaction(
       async (tx) => {
         const user = await tx.user.update({
@@ -229,16 +240,14 @@ export async function updateMe(
 
         const profile = await tx.profile.upsert({
           where: { userId },
-          update: {
-            bio: parsed.bio,
-            avatar: parsed.avatar,
-            location: parsed.location,
-          },
+          update: profileData,
           create: {
             userId,
             bio: parsed.bio ?? undefined,
-            avatar: parsed.avatar ?? undefined,
-            location: parsed.location ?? undefined,
+            avatar: avatar ?? undefined,
+            location: location ?? undefined,
+            region: parsed.region ?? undefined,
+            languages: parsed.languages ?? [],
           },
         });
 

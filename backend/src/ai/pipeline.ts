@@ -124,30 +124,35 @@ export async function runPipeline(ctx: PipelineContext): Promise<void> {
       "Translating content to target languages"
     );
 
+    // Skip translation when there is no source text (silent audio, images
+    // uploaded without a description) — translating empty strings would call
+    // the provider with no content and create junk Translation rows.
     const targetLangIds: string[] = [];
-    for (const targetLang of TRANSLATION_TARGET_LANGUAGES) {
-      if (targetLang === detectedLanguageCode) continue; // skip self-translation
+    if (transcriptText) {
+      for (const targetLang of TRANSLATION_TARGET_LANGUAGES) {
+        if (targetLang === detectedLanguageCode) continue; // skip self-translation
 
-      const translation = await translate(
-        transcriptText,
-        detectedLanguageCode,
-        targetLang
-      );
+        const translation = await translate(
+          transcriptText,
+          detectedLanguageCode,
+          targetLang
+        );
 
-      const langId = await ensureLanguage(
-        translation.targetLanguageCode,
-        translation.targetLanguageName
-      );
-      targetLangIds.push(langId);
+        const langId = await ensureLanguage(
+          translation.targetLanguageCode,
+          translation.targetLanguageName
+        );
+        targetLangIds.push(langId);
 
-      // Store translation in separate Translation table
-      await prisma.translation.create({
-        data: {
-          content: translation.text,
-          languageId: langId,
-          postId: ctx.postId,
-        },
-      });
+        // Store translation in separate Translation table
+        await prisma.translation.create({
+          data: {
+            content: translation.text,
+            languageId: langId,
+            postId: ctx.postId,
+          },
+        });
+      }
     }
 
     // Step 4: TAGGING - extract cultural tags and summary

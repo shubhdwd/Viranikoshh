@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import path from "path";
 import { prisma } from "../utils/prisma";
 import { sendSuccess, sendError } from "../utils/apiResponse";
@@ -365,6 +365,16 @@ export async function completeInterview(
  * Auth required (owner only). Creates a CulturalPost from a completed interview.
  * Body: { published: boolean, title?: string, description?: string, categoryId?: string, regionId?: string }
  */
+const publishInterviewSchema = z
+  .object({
+    published: z.boolean().optional(),
+    title: z.string().trim().min(1).max(200).optional(),
+    description: z.string().trim().min(1).max(2000).optional(),
+    categoryId: z.string().trim().min(1).max(100).optional(),
+    regionId: z.string().trim().min(1).max(100).optional(),
+  })
+  .strict();
+
 export async function publishInterview(
   req: Request,
   res: Response,
@@ -373,7 +383,26 @@ export async function publishInterview(
   try {
     const id = String(req.params.id);
     const userId = req.user!.id;
-    const { published, title, description, categoryId, regionId } = req.body;
+
+    // Validate the body before touching the DB so a malformed categoryId /
+    // regionId fails with a clean 400 instead of a Prisma FK error (500).
+    let parsed: {
+      published?: boolean;
+      title?: string;
+      description?: string;
+      categoryId?: string;
+      regionId?: string;
+    };
+    try {
+      parsed = publishInterviewSchema.parse(req.body);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        sendError(res, 400, "Validation failed.", error.issues);
+        return;
+      }
+      throw error;
+    }
+    const { published, title, description, categoryId, regionId } = parsed;
 
     const interview = await prisma.interview.findUnique({
       where: { id },
@@ -393,6 +422,28 @@ export async function publishInterview(
     if (interview.status !== "COMPLETED") {
       sendError(res, 400, "Interview must be completed before publishing.");
       return;
+    }
+
+    if (categoryId) {
+      const category = await prisma.culturalCategory.findUnique({
+        where: { id: categoryId },
+        select: { id: true },
+      });
+      if (!category) {
+        sendError(res, 400, `Category not found: ${categoryId}`);
+        return;
+      }
+    }
+
+    if (regionId) {
+      const region = await prisma.region.findUnique({
+        where: { id: regionId },
+        select: { id: true },
+      });
+      if (!region) {
+        sendError(res, 400, `Region not found: ${regionId}`);
+        return;
+      }
     }
 
     const audioResponses = interview.questions.flatMap((q) =>
