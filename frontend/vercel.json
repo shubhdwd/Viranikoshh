@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://viranikosh-backend.onrender.com/api/$1" },
-    { "source": "/files/(.*)", "destination": "https://viranikosh-backend.onrender.com/files/$1" },
+    { "source": "/api/(.*)", "destination": "https://viranikosh-backend-ig0k.onrender.com/api/$1" },
+    { "source": "/files/(.*)", "destination": "https://viranikosh-backend-ig0k.onrender.com/files/$1" },
     { "source": "/((?!assets/).*)", "destination": "/index.html" }
   ]
 }
