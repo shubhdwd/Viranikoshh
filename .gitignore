@@ -10,6 +10,10 @@ build/
 .env
 .env.*
 !.env.example
+# Browser-downloaded env backups without the leading dot (e.g. "env (1)")
+env
+env (*)
+env.*
 
 # Test artifacts
 test-results/

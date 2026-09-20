@@ -1,0 +1,49 @@
+# Viranikosh — Render Blueprint for the backend service.
+#
+#   - Deploy: push to GitHub → Render picks up render.yaml automatically
+#     ("Blueprint" workflow). Frontend is deployed separately on Vercel.
+#   - All keys below with `sync: false` are created blank in the dashboard —
+#     fill them from dash: backend/.env (or your local "env (1)" backup).
+#   - CORS_ORIGINS MUST be set to your Vercel frontend URL, e.g.
+#         https://viranikosh.vercel.app
+#
+# Start command runs `prisma migrate deploy` (via DIRECT_URL) then boots the
+# compiled server (npm start = migrate deploy && node dist/server.js).
+services:
+  - type: web
+    name: viranikosh-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: UPLOAD_DIR
+        value: uploads
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
